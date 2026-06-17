@@ -1,0 +1,46 @@
+# Gradle
+.gradle/
+build/
+
+# Wrapper
+!gradle/wrapper/gradle-wrapper.jar
+
+# IntelliJ
+.idea/
+*.iml
+out/
+
+# Eclipse / STS
+.project
+.classpath
+.settings/
+.factorypath
+.apt_generated/
+.springBeans
+.sts4-cache/
+
+# VS Code
+.vscode/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.*
+
+# Local configs
+application-local.yml
+application-local.properties
+
+# OS
+.DS_Store
+.directory
