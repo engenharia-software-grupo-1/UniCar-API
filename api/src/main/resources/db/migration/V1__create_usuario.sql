@@ -12,6 +12,7 @@ CREATE TABLE usuario (
  receber_email BOOLEAN NOT NULL DEFAULT TRUE,
 
  data_criacao TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ ativo BOOLEAN NOT NULL DEFAULT TRUE,
  data_atualizacao TIMESTAMP
 );
 
@@ -44,6 +45,9 @@ COMMENT ON COLUMN usuario.receber_email IS
 
 COMMENT ON COLUMN usuario.data_criacao IS
 'Data e horário em que o cadastro do usuário foi criado.';
+
+COMMENT ON COLUMN usuario.data_criacao IS
+'Indica se um usuário está ativo. Quando a conta é excluída, vira inativo.';
 
 COMMENT ON COLUMN usuario.data_atualizacao IS
 'Data e horário da última atualização dos dados do usuário.';

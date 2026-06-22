@@ -83,7 +83,7 @@ COMMENT ON COLUMN carona.vagas_totais IS
 'Quantidade total de vagas disponíveis na carona.';
 
 COMMENT ON COLUMN carona.valor_contribuicao IS
-'Valor sugerido para contribuição dos passageiros.';
+'Valor de contribuição referente ao percurso completo da carona, utilizado como base para cálculo das contribuições individuais das reservas.';
 
 COMMENT ON COLUMN carona.status IS
 'Estados possíveis: CRIADA, EM_ANDAMENTO, FINALIZADA e CANCELADA.';
