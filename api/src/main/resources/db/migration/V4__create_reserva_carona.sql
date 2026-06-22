@@ -62,3 +62,29 @@ COMMENT ON COLUMN reserva_carona.data_expiracao IS
 
 COMMENT ON COLUMN reserva_carona.data_resposta IS
 'Data e hora em que a reserva foi aceita ou recusada pelo motorista.';
+
+-- Versão com adição de campos para cálculo de contribuição
+
+ALTER TABLE reserva_carona
+    ADD COLUMN origem_embarque_descricao VARCHAR(255) NOT NULL;
+
+ALTER TABLE reserva_carona
+    ADD COLUMN origem_embarque_latitude DECIMAL(10,8) NOT NULL;
+
+ALTER TABLE reserva_carona
+    ADD COLUMN origem_embarque_longitude DECIMAL(11,8) NOT NULL;
+
+ALTER TABLE reserva_carona
+    ADD COLUMN valor_contribuicao NUMERIC(10,2) NOT NULL;
+
+COMMENT ON COLUMN reserva_carona.origem_embarque_descricao IS
+'Descrição textual do local onde o passageiro embarcará na carona.';
+
+COMMENT ON COLUMN reserva_carona.origem_embarque_latitude IS
+'Latitude do ponto de embarque informado pelo passageiro.';
+
+COMMENT ON COLUMN reserva_carona.origem_embarque_longitude IS
+'Longitude do ponto de embarque informado pelo passageiro.';
+
+COMMENT ON COLUMN reserva_carona.valor_contribuicao IS
+'Valor da contribuição calculado para a reserva com base no trecho percorrido e na quantidade de passageiros.';
