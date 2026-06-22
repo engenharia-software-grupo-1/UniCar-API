@@ -3,6 +3,7 @@ CREATE TABLE usuario (
 
  matricula VARCHAR(30) NOT NULL UNIQUE,
  nome VARCHAR(150) NOT NULL,
+ cpf VARCHAR(11) NOT NULL UNIQUE,
  email VARCHAR(150) NOT NULL UNIQUE,
 
  curso VARCHAR(150),
@@ -22,6 +23,9 @@ COMMENT ON COLUMN usuario.id IS
 
 COMMENT ON COLUMN usuario.matricula IS
 'Matrícula acadêmica do usuário. Deve ser única no sistema.';
+
+COMMENT ON COLUMN usuario.cpf IS
+'CPF do usuário. Deve ser único no sistema.';
 
 COMMENT ON COLUMN usuario.nome IS
 'Nome completo do usuário.';
