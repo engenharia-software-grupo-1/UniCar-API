@@ -12,10 +12,9 @@ public class SwaggerConfig {
     @Bean
     public OpenAPI unicarOpenAPI() {
         return new OpenAPI()
-                .info(new Info()
-                        .title("UniCar API")
-                        .description("API para gerenciamento de caronas universitárias")
-                        .version("1.0.0"));
+            .info(new Info()
+                .title("UniCar API")
+                .description("API para gerenciamento de caronas universitárias")
+                .version("1.0.0"));
     }
-
 }

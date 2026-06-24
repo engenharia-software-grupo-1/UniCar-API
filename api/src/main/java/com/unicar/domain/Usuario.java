@@ -1,10 +1,11 @@
 package com.unicar.domain;
 
-import com.unicar.enums.Genero;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+
+import com.unicar.enums.Genero;
 
 @Entity
 @Table(name = "usuario")
