@@ -64,11 +64,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private void autenticarUsuario(Usuario usuario, HttpServletRequest request) {
-        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-            usuario,
-            null,
-            List.of()
-        );
+        UsuarioDetails usuarioDetails = new UsuarioDetails(usuario);
+
+        UsernamePasswordAuthenticationToken authentication =
+            new UsernamePasswordAuthenticationToken(
+                usuarioDetails,
+                null,
+                usuarioDetails.getAuthorities());
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }

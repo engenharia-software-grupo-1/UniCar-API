@@ -1,9 +1,11 @@
 package com.unicar.controller;
 
 import com.unicar.domain.Usuario;
-import com.unicar.dto.UpdatePerfilRequestDTO;
-import com.unicar.dto.UsuarioLogadoResponseDTO;
+import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
+import com.unicar.dto.usuario.UsuarioDTO;
+import com.unicar.security.UsuarioDetails;
 import com.unicar.service.UsuarioService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -26,23 +28,23 @@ public class UsuarioController {
 
     @GetMapping("/me")
     @Operation(summary = "Consulta perfil do usuário autenticado")
-    public ResponseEntity<UsuarioLogadoResponseDTO> buscarPerfil(@AuthenticationPrincipal Usuario usuario) {
-        return ResponseEntity.ok(usuarioService.buscarPerfil(usuario.getId()));
+    public ResponseEntity<UsuarioDTO> buscarPerfil(@AuthenticationPrincipal UsuarioDetails userDetails) {
+        return ResponseEntity.ok(usuarioService.buscarPerfil(userDetails.getUsuario().getId()));
     }
 
     @PatchMapping("/me")
     @Operation(summary = "Atualiza perfil do usuário autenticado")
-    public ResponseEntity<UsuarioLogadoResponseDTO> atualizarPerfil(
-            @AuthenticationPrincipal Usuario usuario,
-            @Valid @RequestBody UpdatePerfilRequestDTO request
+    public ResponseEntity<UsuarioDTO> atualizarPerfil(
+        @AuthenticationPrincipal UsuarioDetails userDetails,
+        @Valid @RequestBody UpdatePerfilRequestDTO request
     ) {
-        return ResponseEntity.ok(usuarioService.atualizarPerfil(usuario.getId(), request));
+        return ResponseEntity.ok(usuarioService.atualizarPerfil(userDetails.getUsuario().getId(), request));
     }
 
     @DeleteMapping("/me")
     @Operation(summary = "Desativa perfil do usuário autenticado")
-    public ResponseEntity<Void> desativarPerfil(@AuthenticationPrincipal Usuario usuario) {
-        usuarioService.desativarPerfil(usuario.getId());
+    public ResponseEntity<Void> desativarPerfil(@AuthenticationPrincipal UsuarioDetails userDetails) {
+        usuarioService.desativarPerfil(userDetails.getUsuario().getId());
         return ResponseEntity.noContent().build();
     }
 }
