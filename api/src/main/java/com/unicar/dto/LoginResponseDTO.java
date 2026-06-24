@@ -1,4 +1,6 @@
 package com.unicar.dto;
 
-public class LoginResponseDTO {
-}
+public record LoginResponseDTO(
+        String token,
+        UsuarioLogadoResponseDTO usuario
+) {}
