@@ -1,9 +1,9 @@
-package com.unicar.auth.service;
+package com.unicar.security;
 
 import org.junit.jupiter.api.Test;
 
 import com.unicar.domain.Usuario;
-import com.unicar.service.auth.JwtServiceImpl;
+import com.unicar.service.auth.JwtService;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class JwtServiceImplTest {
     private static final String SECRET = "VGVzdGUtc2VncmVkbz0tY29tLW1haXMtZGUtdHJpbnRhLWUtZG9pcy1ieXRlcw==";
 
-    private final JwtServiceImpl jwtService = new JwtServiceImpl(SECRET, 86_400_000);
+    private final JwtService jwtService = new JwtService(SECRET, 86_400_000);
 
     @Test
     void deveGerarTokenValidoComApenasIdentificadorDoUsuario() {

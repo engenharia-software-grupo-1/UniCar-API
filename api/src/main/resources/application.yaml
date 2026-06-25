@@ -15,18 +15,8 @@ unicar:
   jwt:
     secret: ${JWT_SECRET}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
-  http:
-    connect-timeout-ms: ${HTTP_CONNECT_TIMEOUT:5000}
-    read-timeout-ms: ${HTTP_READ_TIMEOUT:15000}
 
 eureca:
   url:
-    tokens: ${EURECA_TOKENS_URL:https://eureca.sti.ufcg.edu.br/as-}
-    profile: ${EURECA_PROFILE_URL:https://eureca.sti.ufcg.edu.br/as-}
-
-sigaa:
-  url: ${SIGAA_URL:https://sigaa.ufcg.edu.br}
-  login-path: ${SIGAA_LOGIN_PATH:/sigaa/verTelaLogin.do}
-  retry:
-    max-attempts: ${SIGAA_RETRY_MAX:2}
-    backoff-ms: ${SIGAA_RETRY_BACKOFF:1000}
+    tokens: ${EURECA_TOKENS_URL:https://eureca.sti.ufcg.edu.br/as-sig/tokens}
+    profile: ${EURECA_PROFILE_URL:https://eureca.sti.ufcg.edu.br/as-sig/profile}

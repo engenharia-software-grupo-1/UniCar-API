@@ -1,7 +1,6 @@
 package com.unicar.dto.usuario;
 
 import com.unicar.domain.Usuario;
-import com.unicar.util.PerfilPendenteUtil;
 
 import java.time.LocalDateTime;
 
@@ -14,7 +13,6 @@ public record UsuarioDTO(
     String curso,
     String genero,
     Boolean receberEmail,
-    Boolean perfilCompleto,
     LocalDateTime dataCriacao,
     LocalDateTime dataAtualizacao
 ) {
@@ -28,7 +26,6 @@ public record UsuarioDTO(
             usuario.getCurso(),
             usuario.getGenero() != null ? usuario.getGenero().name() : null,
             usuario.getReceberEmail(),
-            PerfilPendenteUtil.perfilCompleto(usuario),
             usuario.getDataCriacao(),
             usuario.getDataAtualizacao()
         );

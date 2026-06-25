@@ -2,8 +2,8 @@ package com.unicar.controller;
 
 import com.unicar.dto.auth.LoginRequestDTO;
 import com.unicar.dto.auth.LoginResponseDTO;
-import com.unicar.service.auth.AuthService;
 
+import com.unicar.service.auth.AuthService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

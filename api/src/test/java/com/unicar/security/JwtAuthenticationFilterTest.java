@@ -1,10 +1,9 @@
-package com.unicar.auth.security;
+package com.unicar.security;
 
 import com.unicar.domain.Usuario;
 import com.unicar.repository.UsuarioRepository;
-import com.unicar.security.JwtAuthenticationFilter;
-import com.unicar.service.auth.JwtService;
 
+import com.unicar.service.auth.JwtService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;

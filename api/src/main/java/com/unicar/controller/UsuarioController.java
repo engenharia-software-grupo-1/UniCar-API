@@ -1,12 +1,12 @@
 package com.unicar.controller;
 
-import com.unicar.domain.Usuario;
 import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
 import com.unicar.dto.usuario.UsuarioDTO;
 import com.unicar.security.UsuarioDetails;
 import com.unicar.service.UsuarioService;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/usuarios")
 @Tag(name = "Usuários")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "bearerAuth")
 public class UsuarioController {
     private final UsuarioService usuarioService;
 
