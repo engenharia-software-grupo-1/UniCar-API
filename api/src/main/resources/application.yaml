@@ -20,3 +20,6 @@ eureca:
   url:
     tokens: ${EURECA_TOKENS_URL:https://eureca.sti.ufcg.edu.br/as-sig/tokens}
     profile: ${EURECA_PROFILE_URL:https://eureca.sti.ufcg.edu.br/as-sig/profile}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}

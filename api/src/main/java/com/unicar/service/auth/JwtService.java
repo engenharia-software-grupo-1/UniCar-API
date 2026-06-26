@@ -58,4 +58,8 @@ public class JwtService {
             .parseSignedClaims(token)
             .getPayload();
     }
+
+    public Instant extrairExpiracao(String token) {
+        return extrairClaims(token).getExpiration().toInstant();
+    }
 }

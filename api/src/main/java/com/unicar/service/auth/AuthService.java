@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
 
@@ -33,11 +34,13 @@ public class AuthService {
     private final UsuarioRepository usuarioRepository;
     private final JwtService jwtService;
     private final RestClient restClient;
+    private final BlacklistService blacklistService;
 
-    public AuthService(UsuarioRepository usuarioRepository, JwtService jwtService, RestClient.Builder restClientBuilder) {
+    public AuthService(UsuarioRepository usuarioRepository, JwtService jwtService, RestClient.Builder restClientBuilder, BlacklistService blacklistService) {
         this.usuarioRepository = usuarioRepository;
         this.jwtService = jwtService;
         this.restClient = restClientBuilder.build();
+        this.blacklistService = blacklistService;
     }
 
     public LoginResponseDTO login(LoginRequestDTO request) {
@@ -87,6 +90,17 @@ public class AuthService {
                 "Erro ao comunicar com o provedor de autenticação."
             );
         }
+    }
+
+    public void logout(String accessToken) {
+        if (!jwtService.tokenValido(accessToken)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Token inválido ou expirado.");
+        }
+
+        Instant expiracao = jwtService.extrairExpiracao(accessToken);
+        blacklistService.revogar(accessToken, expiracao);
+
+        log.info("Logout realizado.");
     }
 
     private EurecaProfileResponseDTO consultarPerfilEureca(String eurecaToken) {

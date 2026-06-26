@@ -3,12 +3,14 @@ package com.unicar.security;
 import com.unicar.domain.Usuario;
 import com.unicar.repository.UsuarioRepository;
 
+import com.unicar.service.auth.BlacklistService;
 import com.unicar.service.auth.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -18,13 +20,16 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtService jwtService;
     private final UsuarioRepository usuarioRepository;
+    private final BlacklistService blacklistService;
 
     @Override
     protected void doFilterInternal(
@@ -32,6 +37,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         HttpServletResponse response,
         FilterChain filterChain
     ) throws ServletException, IOException {
+
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
 
         if (authorization == null || !authorization.startsWith(BEARER_PREFIX)) {
@@ -40,6 +46,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String token = authorization.substring(BEARER_PREFIX.length());
+
         if (SecurityContextHolder.getContext().getAuthentication() == null) {
             autenticarComToken(token, request);
         }
@@ -50,6 +57,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private void autenticarComToken(String token, HttpServletRequest request) {
         try {
             if (!jwtService.tokenValido(token)) {
+                log.debug("Token inválido recebido");
+                return;
+            }
+
+            if (blacklistService.estaRevogado(token)) {
+                log.debug("Token revogado recebido");
                 return;
             }
 
@@ -57,7 +70,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             usuarioRepository.findById(usuarioId)
                 .filter(usuario -> Boolean.TRUE.equals(usuario.getAtivo()))
                 .ifPresent(usuario -> autenticarUsuario(usuario, request));
-        } catch (RuntimeException ignored) {
+
+        } catch (RuntimeException e) {
+            log.warn("Erro ao autenticar token: {}", e.getMessage());
             SecurityContextHolder.clearContext();
         }
     }
@@ -70,7 +85,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 usuarioDetails,
                 null,
                 usuarioDetails.getAuthorities());
+
         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        log.debug("Usuário autenticado via JWT: {}", usuario.getId());
     }
 }
