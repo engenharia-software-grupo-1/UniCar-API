@@ -993,6 +993,27 @@ paths:
               example:
                 message: Credenciais inválidas
 
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Encerrar sessão do usuário
+      description: >
+        Invalida o token JWT do usuário autenticado, adicionando-o à blacklist
+        até sua expiração natural (RN-AUTH-04).
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Logout realizado com sucesso
+        '401':
+          description: Token inválido ou expirado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+              example:
+                message: Token inválido ou expirado.
+
   # ── Usuários ──────────────────────────────────────────────────────────────
 
   /usuarios/me:
