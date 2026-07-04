@@ -3,6 +3,7 @@ package com.unicar.service;
 import com.unicar.domain.Usuario;
 import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
 import com.unicar.dto.usuario.UsuarioDTO;
+import com.unicar.dto.usuario.UsuarioPublicoDTO;
 import com.unicar.repository.UsuarioRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,10 @@ public class UsuarioService {
 
     public UsuarioDTO buscarPerfil(Long usuarioId) {
         return UsuarioDTO.from(buscarUsuarioAtivo(usuarioId));
+    }
+
+    public UsuarioPublicoDTO buscarUsuario(String matricula) {
+        return UsuarioPublicoDTO.from(buscarUsuarioAtivo(matricula));
     }
 
     @Transactional
@@ -44,18 +49,33 @@ public class UsuarioService {
 
     private Usuario buscarUsuarioAtivo(Long usuarioId) {
         Usuario usuario = usuarioRepository.findById(usuarioId)
-            .orElseThrow(() -> new ResponseStatusException(
-                HttpStatus.NOT_FOUND,
-                "Usuário não encontrado"
-            ));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Usuário não encontrado"
+                ));
 
-        if (!Boolean.TRUE.equals(usuario.getAtivo())) {
-            throw new ResponseStatusException(
-                HttpStatus.FORBIDDEN,
-                "Usuário desativado"
-            );
-        }
+        validarUsuarioAtivo(usuario);
 
         return usuario;
+    }
+
+    private Usuario buscarUsuarioAtivo(String matricula) {
+        Usuario usuario = usuarioRepository.findByMatricula(matricula)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Usuário não encontrado"
+                ));
+
+        validarUsuarioAtivo(usuario);
+
+        return usuario;
+    }
+    private void validarUsuarioAtivo(Usuario usuario) {
+        if (!Boolean.TRUE.equals(usuario.getAtivo())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Usuário desativado"
+            );
+        }
     }
 }
