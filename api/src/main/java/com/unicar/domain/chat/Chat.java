@@ -1,4 +1,4 @@
-package com.unicar.domain;
+package com.unicar.domain.chat;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -17,10 +17,11 @@ public class Chat {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "reserva_id", nullable = false, unique = true)
-    private Long reservaId;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reserva_id", nullable = false, unique = true)
+    private ReservaCarona reserva;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "data_criacao", nullable = false, updatable = false)
     private LocalDateTime dataCriacao;
 
     @PrePersist
