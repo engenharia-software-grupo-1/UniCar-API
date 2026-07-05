@@ -35,6 +35,7 @@ public class VeiculoService {
             .modelo(request.modelo())
             .placa(request.placa())
             .cor(request.cor())
+            .tipoVeiculo(request.tipoVeiculo())
             .build();
 
         return VeiculoResponseDTO.from(veiculoRepository.save(veiculo));
@@ -46,6 +47,7 @@ public class VeiculoService {
         veiculo.setModelo(request.modelo());
         veiculo.setPlaca(request.placa());
         veiculo.setCor(request.cor());
+        veiculo.setTipoVeiculo(request.tipoVeiculo());
         return VeiculoResponseDTO.from(veiculoRepository.save(veiculo));
     }
 

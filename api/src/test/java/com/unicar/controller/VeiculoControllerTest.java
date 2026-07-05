@@ -2,6 +2,7 @@ package com.unicar.controller;
 
 import com.unicar.domain.Usuario;
 import com.unicar.dto.veiculo.VeiculoResponseDTO;
+import com.unicar.enums.TipoVeiculo;
 import com.unicar.security.UsuarioDetails;
 import com.unicar.service.VeiculoService;
 import org.junit.jupiter.api.Test;
@@ -23,7 +24,7 @@ class VeiculoControllerTest {
         UsuarioDetails principal = new UsuarioDetails(usuario);
 
         when(veiculoService.listarPorUsuario(7L)).thenReturn(List.of(
-            new VeiculoResponseDTO(1L, "Onix", "ABC1234", "Prata")
+            new VeiculoResponseDTO(1L, "Onix", "ABC1234", "Prata", TipoVeiculo.CARRO)
         ));
 
         ResponseEntity<List<VeiculoResponseDTO>> response = controller.listar(principal);
@@ -32,5 +33,6 @@ class VeiculoControllerTest {
         assertThat(response.getBody()).hasSize(1);
         assertThat(response.getBody().get(0).modelo()).isEqualTo("Onix");
         assertThat(response.getBody().get(0).placa()).isEqualTo("ABC1234");
+        assertThat(response.getBody().get(0).tipoVeiculo()).isEqualTo(TipoVeiculo.CARRO);
     }
 }
