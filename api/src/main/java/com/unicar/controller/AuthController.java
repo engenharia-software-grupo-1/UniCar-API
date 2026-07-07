@@ -4,7 +4,6 @@ import com.unicar.dto.auth.LoginRequestDTO;
 import com.unicar.dto.auth.LoginResponseDTO;
 
 import com.unicar.service.auth.AuthService;
-import com.unicar.service.auth.BlacklistService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
