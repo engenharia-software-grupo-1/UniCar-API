@@ -1,9 +1,14 @@
 # Gradle
-api/.gradle/
-build/
-
-# Wrapper
+.gradle/
+**/build/
 !gradle/wrapper/gradle-wrapper.jar
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
 
 # IntelliJ
 .idea/
@@ -29,18 +34,48 @@ out/
 /nbdist/
 /.nb-gradle/
 
+# Spring Boot
+application-local.yml
+application-local.properties
+application-*.local.yml
+application-*.local.properties
+
+# Env
+.env
+.env.*
+*.env
+
 # Logs
 *.log
 logs/
 
-# Environment
-.env
-.env.*
+# Test
+**/reports/
+**/test-results/
+**/jacoco/
 
-# Local configs
-application-local.yml
-application-local.properties
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+docker-compose.override.yml
+
+# Certificates
+*.pem
+*.key
+*.crt
 
 # OS
 .DS_Store
 .directory
+Thumbs.db
+
+# Misc
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+*.bak
