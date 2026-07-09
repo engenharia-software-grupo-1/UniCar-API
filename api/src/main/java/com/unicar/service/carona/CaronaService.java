@@ -40,8 +40,8 @@ public class CaronaService {
         Carona carona = buscarCarona(caronaId);
         validarMotorista(carona, usuarioId);
 
-        if (carona.getStatus() != StatusCarona.EM_ANDAMENTO) {
-            throw new EstadoInvalidoException("Só é possível iniciar caronas com status AGENDADA. Status atual: " + carona.getStatus());
+        if (carona.getStatus() != StatusCarona.CRIADA) {
+            throw new EstadoInvalidoException("Só é possível iniciar caronas com status CRIADA. Status atual: " + carona.getStatus());
         }
 
         carona.setStatus(StatusCarona.EM_ANDAMENTO);

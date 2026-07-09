@@ -58,7 +58,6 @@ class CaronaServiceTest {
         carona.setMotorista(motorista);
     }
 
-
     @Nested
     @DisplayName("Listar passageiros")
     class ListarPassageiros {
@@ -128,29 +127,19 @@ class CaronaServiceTest {
     @DisplayName("Iniciar carona")
     class IniciarCarona {
         @Test
-        @DisplayName("Deve iniciar carona quando status estiver EM_ANDAMENTO")
+        @DisplayName("Deve iniciar carona quando status estiver CRIADA")
         void deveIniciarCarona() {
-
-
-            carona.setStatus(StatusCarona.EM_ANDAMENTO);
-
-
+            carona.setStatus(StatusCarona.CRIADA);
             when(caronaRepository.findById(caronaId))
                     .thenReturn(Optional.of(carona));
-
-
             caronaService.iniciarCarona(
                     caronaId,
                     motoristaId
             );
-
-
             assertEquals(
                     StatusCarona.EM_ANDAMENTO,
                     carona.getStatus()
             );
-
-
             verify(caronaRepository)
                     .save(carona);
         }

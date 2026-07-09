@@ -1,76 +1,79 @@
 package com.unicar.controller.carona;
 
 import com.unicar.domain.Usuario;
+import com.unicar.security.JwtAuthenticationFilter;
 import com.unicar.security.UsuarioDetails;
 import com.unicar.service.carona.ReservaCaronaService;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-
+@WebMvcTest(ReservaCaronaController.class)
+@AutoConfigureMockMvc(addFilters = false)
 class ReservaCaronaControllerTest {
 
-    @Mock
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
     private ReservaCaronaService reservaCaronaService;
 
-    @InjectMocks
-    private ReservaCaronaController reservaCaronaController;
-
+    @MockitoBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     private UsuarioDetails usuarioDetails;
 
-    private final Long usuarioId = 1L;
-    private final Long reservaId = 10L;
-
-
     @BeforeEach
     void setup() {
-        MockitoAnnotations.openMocks(this);
-
         Usuario usuario = new Usuario();
-        usuario.setId(usuarioId);
+        usuario.setId(1L);
         usuario.setEmail("teste@email.com");
 
         usuarioDetails = new UsuarioDetails(usuario);
+
+        UsernamePasswordAuthenticationToken authentication =
+                new UsernamePasswordAuthenticationToken(
+                        usuarioDetails,
+                        null,
+                        usuarioDetails.getAuthorities()
+                );
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Nested
     @DisplayName("PATCH /reservas/{id}/cancelar")
     class CancelarReserva {
 
-
         @Test
-        @DisplayName("Deve cancelar uma reserva de carona")
-        void deveCancelarReserva() {
+        @DisplayName("deve retornar 204 ao cancelar uma reserva")
+        void deveCancelarReserva() throws Exception {
 
-            ResponseEntity<Void> response =
-                    reservaCaronaController.cancelar(
-                            reservaId,
-                            usuarioDetails
-                    );
-
-
-            assertEquals(
-                    HttpStatus.NO_CONTENT,
-                    response.getStatusCode()
-            );
-
+            mockMvc.perform(patch("/reservas/{id}/cancelar", 10L))
+            .andExpect(status().isNoContent());
 
             verify(reservaCaronaService)
-                    .cancelarReserva(reservaId, usuarioId);
+                    .cancelarReserva(10L, 1L);
         }
     }
 }
