@@ -4,6 +4,7 @@ import com.unicar.domain.ReservaCarona;
 import com.unicar.enums.StatusReserva;
 import com.unicar.exception.AcessoNegadoException;
 import com.unicar.exception.EstadoInvalidoException;
+import com.unicar.exception.ReservaNaoEncontradaException;
 import com.unicar.repository.ReservaCaronaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,7 +30,7 @@ public class ReservaCaronaService {
     }
 
     public ReservaCarona buscarReserva(Long reservaId) {
-        return repository.findById(reservaId).orElseThrow();
+        return repository.findById(reservaId).orElseThrow(() -> new ReservaNaoEncontradaException("Reserva não encontrada: id=" + reservaId));
     }
 
     private void validarDono(ReservaCarona reserva, Long usuarioId) {
