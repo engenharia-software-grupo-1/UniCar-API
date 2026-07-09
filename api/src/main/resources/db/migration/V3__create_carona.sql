@@ -5,11 +5,11 @@ CREATE TABLE carona (
     veiculo_id BIGINT NOT NULL,
 
     origem_descricao VARCHAR(255) NOT NULL,
-    origem_latitude DECIMAL(11,8) NOT NULL,
+    origem_latitude DECIMAL(10,8) NOT NULL,
     origem_longitude DECIMAL(11,8) NOT NULL,
 
     destino_descricao VARCHAR(255) NOT NULL,
-    destino_latitude DECIMAL(11,8) NOT NULL,
+    destino_latitude DECIMAL(10,8) NOT NULL,
     destino_longitude DECIMAL(11,8) NOT NULL,
 
     ponto_encontro_descricao VARCHAR(255) NOT NULL,
