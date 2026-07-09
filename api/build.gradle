@@ -48,10 +48,6 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 }
 
-tasks.named('test') {
-	useJUnitPlatform()
-}
-
 jacoco {
     toolVersion = "0.8.13"
 }
@@ -62,8 +58,6 @@ tasks.named('test') {
 }
 
 tasks.named('jacocoTestReport') {
-    dependsOn tasks.named('test')
-
     classDirectories.setFrom(
         files(classDirectories.files.collect {
             fileTree(dir: it, exclude: [
