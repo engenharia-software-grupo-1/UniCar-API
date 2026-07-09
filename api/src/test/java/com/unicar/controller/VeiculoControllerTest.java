@@ -53,7 +53,7 @@ class VeiculoControllerTest {
             new VeiculoResponseDTO(2L, "CG 160", "XYZ9876", "Vermelha", TipoVeiculo.MOTO)
         );
 
-        when(veiculoService.listarPorUsuario(usuario)).thenReturn(veiculos);
+        when(veiculoService.listarPorUsuario(usuario.getId())).thenReturn(veiculos);
 
         ResponseEntity<List<VeiculoResponseDTO>> response = controller.listar(principal);
 
@@ -77,7 +77,7 @@ class VeiculoControllerTest {
         assertThat(segundo.cor()).isEqualTo("Vermelha");
         assertThat(segundo.tipoVeiculo()).isEqualTo(TipoVeiculo.MOTO);
 
-        verify(veiculoService).listarPorUsuario(usuario);
+        verify(veiculoService).listarPorUsuario(usuario.getId());
         verifyNoMoreInteractions(veiculoService);
     }
 
@@ -99,14 +99,14 @@ class VeiculoControllerTest {
             TipoVeiculo.CARRO
         );
 
-        when(veiculoService.criar(usuario, request)).thenReturn(responseDTO);
+        when(veiculoService.criar(usuario.getId(), request)).thenReturn(responseDTO);
 
         ResponseEntity<VeiculoResponseDTO> response = controller.criar(principal, request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isEqualTo(responseDTO);
 
-        verify(veiculoService).criar(usuario, request);
+        verify(veiculoService).criar(usuario.getId(), request);
         verifyNoMoreInteractions(veiculoService);
     }
 
@@ -121,14 +121,14 @@ class VeiculoControllerTest {
             TipoVeiculo.CARRO
         );
 
-        when(veiculoService.buscarPorId(usuario, 1L)).thenReturn(responseDTO);
+        when(veiculoService.buscarPorId(usuario.getId(), 1L)).thenReturn(responseDTO);
 
         ResponseEntity<VeiculoResponseDTO> response = controller.buscarPorId(principal, 1L);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(responseDTO);
 
-        verify(veiculoService).buscarPorId(usuario, 1L);
+        verify(veiculoService).buscarPorId(usuario.getId(), 1L);
         verifyNoMoreInteractions(veiculoService);
     }
 
@@ -150,14 +150,14 @@ class VeiculoControllerTest {
             TipoVeiculo.CARRO
         );
 
-        when(veiculoService.atualizar(usuario, 1L, request)).thenReturn(responseDTO);
+        when(veiculoService.atualizar(usuario.getId(), 1L, request)).thenReturn(responseDTO);
 
         ResponseEntity<VeiculoResponseDTO> response = controller.atualizar(principal, 1L, request);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo(responseDTO);
 
-        verify(veiculoService).atualizar(usuario, 1L, request);
+        verify(veiculoService).atualizar(usuario.getId(), 1L, request);
         verifyNoMoreInteractions(veiculoService);
     }
 
@@ -166,7 +166,7 @@ class VeiculoControllerTest {
     void deveExcluirVeiculo() {
         controller.excluir(principal, 1L);
 
-        verify(veiculoService).excluir(usuario, 1L);
+        verify(veiculoService).excluir(usuario.getId(), 1L);
         verifyNoMoreInteractions(veiculoService);
     }
 }
