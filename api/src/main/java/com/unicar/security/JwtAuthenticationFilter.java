@@ -30,10 +30,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UsuarioRepository usuarioRepository;
     private final BlacklistService blacklistService;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UsuarioRepository usuarioRepository) {
-        this(jwtService, usuarioRepository, null);
-    }
-
     @Autowired
     public JwtAuthenticationFilter(
         JwtService jwtService,
@@ -75,7 +71,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 return;
             }
 
-            if (blacklistService != null && blacklistService.estaRevogado(token)) {
+            if (blacklistService.estaRevogado(token)) {
                 log.debug("Token revogado recebido");
                 return;
             }
