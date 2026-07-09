@@ -8,8 +8,13 @@ import com.unicar.enums.Genero;
 import com.unicar.repository.UsuarioRepository;
 import com.unicar.service.UsuarioService;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -19,7 +24,8 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -52,217 +58,286 @@ class UsuarioServiceTest {
                 .build();
     }
 
-    @Test
-    void deveBuscarPerfil() {
-        when(usuarioRepository.findById(1L))
-                .thenReturn(Optional.of(usuario));
-
-        UsuarioDTO dto = usuarioService.buscarPerfil(1L);
-
-        assertThat(dto).isNotNull();
-        assertThat(dto.id()).isEqualTo(usuario.getId());
-        assertThat(dto.cpf()).isEqualTo(usuario.getCpf());
-        assertThat(dto.nome()).isEqualTo(usuario.getNome());
-
-        verify(usuarioRepository).findById(1L);
+    private void mockSaveRetornandoMesmoUsuario() {
+        when(usuarioRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
-    @Test
-    void deveBuscarUsuarioPublico() {
-        when(usuarioRepository.findByMatricula("20230001"))
-                .thenReturn(Optional.of(usuario));
+    @Nested
+    @DisplayName("buscarPerfil")
+    class BuscarPerfil {
 
-        UsuarioPublicoDTO dto = usuarioService.buscarUsuario("20230001");
+        @Test
+        @DisplayName("deve retornar o perfil quando o usuário existe e está ativo")
+        void deveBuscarPerfil() {
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
 
-        assertThat(dto).isNotNull();
-        assertThat(dto.id()).isEqualTo(usuario.getId());
-        assertThat(dto.nome()).isEqualTo(usuario.getNome());
-        assertThat(dto.email()).isEqualTo(usuario.getEmail());
-        assertThat(dto.curso()).isEqualTo(usuario.getCurso());
+            UsuarioDTO dto = usuarioService.buscarPerfil(1L);
 
-        verify(usuarioRepository).findByMatricula("20230001");
+            assertThat(dto).isNotNull();
+            assertThat(dto.id()).isEqualTo(usuario.getId());
+            assertThat(dto.cpf()).isEqualTo(usuario.getCpf());
+            assertThat(dto.nome()).isEqualTo(usuario.getNome());
+
+            verify(usuarioRepository).findById(1L);
+            verify(usuarioRepository, never()).save(any());
+            verifyNoMoreInteractions(usuarioRepository);
+        }
+
+        @Test
+        @DisplayName("deve lançar 404 quando o usuário não existe")
+        void deveLancar404AoBuscarPerfil() {
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> usuarioService.buscarPerfil(1L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> {
+                    ResponseStatusException ex = (ResponseStatusException) exception;
+                    assertThat(ex.getStatusCode()).isEqualTo(NOT_FOUND);
+                    assertThat(ex.getReason()).isEqualTo("Usuário não encontrado");
+                });
+
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("deve lançar 403 quando o usuário está desativado")
+        void deveLancar403QuandoUsuarioDesativadoAoBuscarPerfil() {
+            usuario.setAtivo(false);
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+
+            assertThatThrownBy(() -> usuarioService.buscarPerfil(1L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> {
+                    ResponseStatusException ex = (ResponseStatusException) exception;
+                    assertThat(ex.getStatusCode()).isEqualTo(FORBIDDEN);
+                    assertThat(ex.getReason()).isEqualTo("Usuário desativado");
+                });
+
+            verify(usuarioRepository, never()).save(any());
+        }
     }
 
-    @Test
-    void deveAtualizarGeneroEReceberEmail() {
+    @Nested
+    @DisplayName("buscarUsuario")
+    class BuscarUsuario {
 
-        UpdatePerfilRequestDTO request =
-                new UpdatePerfilRequestDTO(Genero.MASCULINO, false);
+        @Test
+        @DisplayName("deve retornar o usuário público quando existe e está ativo")
+        void deveBuscarUsuarioPublico() {
+            when(usuarioRepository.findByMatricula("20230001")).thenReturn(Optional.of(usuario));
 
-        when(usuarioRepository.findById(1L))
-                .thenReturn(Optional.of(usuario));
+            UsuarioPublicoDTO dto = usuarioService.buscarUsuario("20230001");
 
-        when(usuarioRepository.save(any()))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+            assertThat(dto).isNotNull();
+            assertThat(dto.id()).isEqualTo(usuario.getId());
+            assertThat(dto.nome()).isEqualTo(usuario.getNome());
+            assertThat(dto.email()).isEqualTo(usuario.getEmail());
+            assertThat(dto.curso()).isEqualTo(usuario.getCurso());
 
-        UsuarioDTO dto = usuarioService.atualizarPerfil(1L, request);
+            verify(usuarioRepository).findByMatricula("20230001");
+            verify(usuarioRepository, never()).save(any());
+            verifyNoMoreInteractions(usuarioRepository);
+        }
 
-        assertThat(dto.genero()).isEqualTo("MASCULINO");
-        assertThat(dto.receberEmail()).isFalse();
+        @Test
+        @DisplayName("deve lançar 404 quando a matrícula não existe")
+        void deveLancar404AoBuscarUsuarioPublico() {
+            when(usuarioRepository.findByMatricula("20230001")).thenReturn(Optional.empty());
 
-        verify(usuarioRepository).save(usuario);
+            assertThatThrownBy(() -> usuarioService.buscarUsuario("20230001"))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> {
+                    ResponseStatusException ex = (ResponseStatusException) exception;
+                    assertThat(ex.getStatusCode()).isEqualTo(NOT_FOUND);
+                    assertThat(ex.getReason()).isEqualTo("Usuário não encontrado");
+                });
+        }
+
+        @Test
+        @DisplayName("deve lançar 403 quando o usuário está desativado")
+        void deveLancar403QuandoUsuarioDesativadoAoBuscarUsuarioPublico() {
+            usuario.setAtivo(false);
+            when(usuarioRepository.findByMatricula("20230001")).thenReturn(Optional.of(usuario));
+
+            assertThatThrownBy(() -> usuarioService.buscarUsuario("20230001"))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> {
+                    ResponseStatusException ex = (ResponseStatusException) exception;
+                    assertThat(ex.getStatusCode()).isEqualTo(FORBIDDEN);
+                    assertThat(ex.getReason()).isEqualTo("Usuário desativado");
+                });
+        }
     }
 
-    @Test
-    void deveAtualizarSomenteGenero() {
+    @Nested
+    @DisplayName("atualizarPerfil")
+    class AtualizarPerfil {
 
-        UpdatePerfilRequestDTO request =
-                new UpdatePerfilRequestDTO(Genero.FEMININO, null);
+        @Test
+        @DisplayName("deve atualizar gênero e receberEmail quando ambos são informados")
+        void deveAtualizarGeneroEReceberEmail() {
+            UpdatePerfilRequestDTO request = new UpdatePerfilRequestDTO(Genero.MASCULINO, false);
 
-        when(usuarioRepository.findById(1L))
-                .thenReturn(Optional.of(usuario));
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+            mockSaveRetornandoMesmoUsuario();
 
-        when(usuarioRepository.save(any()))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+            UsuarioDTO dto = usuarioService.atualizarPerfil(1L, request);
 
-        usuarioService.atualizarPerfil(1L, request);
+            assertThat(dto.genero()).isEqualTo(Genero.MASCULINO.name());
+            assertThat(dto.receberEmail()).isFalse();
 
-        assertThat(usuario.getGenero())
-                .isEqualTo(Genero.FEMININO);
+            ArgumentCaptor<Usuario> captor = ArgumentCaptor.forClass(Usuario.class);
+            verify(usuarioRepository).save(captor.capture());
+            assertThat(captor.getValue().getGenero()).isEqualTo(Genero.MASCULINO);
+            assertThat(captor.getValue().getReceberEmail()).isFalse();
+        }
 
-        assertThat(usuario.getReceberEmail())
-                .isTrue();
+        @Test
+        @DisplayName("deve atualizar somente o gênero quando receberEmail é null")
+        void deveAtualizarSomenteGenero() {
+            UpdatePerfilRequestDTO request = new UpdatePerfilRequestDTO(Genero.FEMININO, null);
 
-        verify(usuarioRepository).save(usuario);
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+            mockSaveRetornandoMesmoUsuario();
+
+            usuarioService.atualizarPerfil(1L, request);
+
+            assertThat(usuario.getGenero()).isEqualTo(Genero.FEMININO);
+            assertThat(usuario.getReceberEmail()).isTrue();
+
+            verify(usuarioRepository).save(usuario);
+        }
+
+        @Test
+        @DisplayName("deve atualizar somente receberEmail quando gênero é null")
+        void deveAtualizarSomenteReceberEmail() {
+            UpdatePerfilRequestDTO request = new UpdatePerfilRequestDTO(null, false);
+
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+            mockSaveRetornandoMesmoUsuario();
+
+            usuarioService.atualizarPerfil(1L, request);
+
+            assertThat(usuario.getReceberEmail()).isFalse();
+            assertThat(usuario.getGenero()).isEqualTo(Genero.NAO_INFORMADO);
+
+            verify(usuarioRepository).save(usuario);
+        }
+
+        @Test
+        @DisplayName("não deve alterar nada quando gênero e receberEmail são null, mas ainda deve salvar")
+        void naoDeveAlterarNadaQuandoAmbosSaoNull() {
+            UpdatePerfilRequestDTO request = new UpdatePerfilRequestDTO(null, null);
+
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+            mockSaveRetornandoMesmoUsuario();
+
+            UsuarioDTO dto = usuarioService.atualizarPerfil(1L, request);
+
+            assertThat(usuario.getGenero()).isEqualTo(Genero.NAO_INFORMADO);
+            assertThat(usuario.getReceberEmail()).isTrue();
+            assertThat(dto.genero()).isEqualTo(Genero.NAO_INFORMADO.name());
+            assertThat(dto.receberEmail()).isTrue();
+
+            verify(usuarioRepository).save(usuario);
+        }
+
+        @ParameterizedTest(name = "deve aceitar o gênero {0}")
+        @EnumSource(Genero.class)
+        @DisplayName("deve atualizar corretamente para qualquer valor de Genero")
+        void deveAtualizarParaQualquerGenero(Genero genero) {
+            UpdatePerfilRequestDTO request = new UpdatePerfilRequestDTO(genero, null);
+
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+            mockSaveRetornandoMesmoUsuario();
+
+            UsuarioDTO dto = usuarioService.atualizarPerfil(1L, request);
+
+            assertThat(dto.genero()).isEqualTo(genero.name());
+            assertThat(usuario.getGenero()).isEqualTo(genero);
+        }
+
+        @Test
+        @DisplayName("deve lançar 404 quando o usuário não existe")
+        void deveLancar404AoAtualizarPerfil() {
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> usuarioService.atualizarPerfil(1L, new UpdatePerfilRequestDTO(null, true)))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> {
+                    ResponseStatusException ex = (ResponseStatusException) exception;
+                    assertThat(ex.getStatusCode()).isEqualTo(NOT_FOUND);
+                });
+
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("deve lançar 403 ao tentar atualizar perfil de usuário desativado")
+        void deveLancar403AoAtualizarPerfilDeUsuarioDesativado() {
+            usuario.setAtivo(false);
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+
+            assertThatThrownBy(() -> usuarioService.atualizarPerfil(1L, new UpdatePerfilRequestDTO(null, true)))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> {
+                    ResponseStatusException ex = (ResponseStatusException) exception;
+                    assertThat(ex.getStatusCode()).isEqualTo(FORBIDDEN);
+                });
+
+            verify(usuarioRepository, never()).save(any());
+        }
     }
 
-    @Test
-    void deveAtualizarSomenteReceberEmail() {
+    @Nested
+    @DisplayName("desativarPerfil")
+    class DesativarPerfil {
 
-        UpdatePerfilRequestDTO request =
-                new UpdatePerfilRequestDTO(null, false);
+        @Test
+        @DisplayName("deve desativar o usuário ativo")
+        void deveDesativarPerfil() {
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
 
-        when(usuarioRepository.findById(1L))
-                .thenReturn(Optional.of(usuario));
+            usuarioService.desativarPerfil(1L);
 
-        when(usuarioRepository.save(any()))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+            assertThat(usuario.getAtivo()).isFalse();
 
-        usuarioService.atualizarPerfil(1L, request);
+            ArgumentCaptor<Usuario> captor = ArgumentCaptor.forClass(Usuario.class);
+            verify(usuarioRepository).save(captor.capture());
+            assertThat(captor.getValue().getAtivo()).isFalse();
+            assertThat(captor.getValue().getId()).isEqualTo(1L);
+        }
 
-        assertThat(usuario.getReceberEmail())
-                .isFalse();
+        @Test
+        @DisplayName("deve lançar 404 quando o usuário não existe")
+        void deveLancar404AoDesativarPerfil() {
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.empty());
 
-        assertThat(usuario.getGenero())
-                .isEqualTo(Genero.NAO_INFORMADO);
+            assertThatThrownBy(() -> usuarioService.desativarPerfil(1L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> {
+                    ResponseStatusException ex = (ResponseStatusException) exception;
+                    assertThat(ex.getStatusCode()).isEqualTo(NOT_FOUND);
+                });
 
-        verify(usuarioRepository).save(usuario);
-    }
+            verify(usuarioRepository, never()).save(any());
+        }
 
-    @Test
-    void deveDesativarPerfil() {
+        @Test
+        @DisplayName("deve lançar 403 ao tentar desativar usuário já desativado")
+        void deveLancar403AoDesativarUsuarioJaDesativado() {
+            usuario.setAtivo(false);
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
 
-        when(usuarioRepository.findById(1L))
-                .thenReturn(Optional.of(usuario));
+            assertThatThrownBy(() -> usuarioService.desativarPerfil(1L))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(exception -> {
+                    ResponseStatusException ex = (ResponseStatusException) exception;
+                    assertThat(ex.getStatusCode()).isEqualTo(FORBIDDEN);
+                    assertThat(ex.getReason()).isEqualTo("Usuário desativado");
+                });
 
-        usuarioService.desativarPerfil(1L);
-
-        assertThat(usuario.getAtivo()).isFalse();
-
-        verify(usuarioRepository).save(usuario);
-    }
-
-    @Test
-    void deveLancar404AoBuscarPerfil() {
-
-        when(usuarioRepository.findById(1L))
-                .thenReturn(Optional.empty());
-
-        ResponseStatusException ex =
-                catchThrowableOfType(
-                        () -> usuarioService.buscarPerfil(1L),
-                        ResponseStatusException.class);
-
-        assertThat(ex.getStatusCode())
-                .isEqualTo(NOT_FOUND);
-    }
-
-    @Test
-    void deveLancar404AoBuscarUsuarioPublico() {
-
-        when(usuarioRepository.findByMatricula("20230001"))
-                .thenReturn(Optional.empty());
-
-        ResponseStatusException ex =
-                catchThrowableOfType(
-                        () -> usuarioService.buscarUsuario("20230001"),
-                        ResponseStatusException.class);
-
-        assertThat(ex.getStatusCode())
-                .isEqualTo(NOT_FOUND);
-    }
-
-    @Test
-    void deveLancar403QuandoUsuarioDesativadoAoBuscarPerfil() {
-
-        usuario.setAtivo(false);
-
-        when(usuarioRepository.findById(1L))
-                .thenReturn(Optional.of(usuario));
-
-        ResponseStatusException ex =
-                catchThrowableOfType(
-                        () -> usuarioService.buscarPerfil(1L),
-                        ResponseStatusException.class);
-
-        assertThat(ex.getStatusCode())
-                .isEqualTo(FORBIDDEN);
-    }
-
-    @Test
-    void deveLancar403QuandoUsuarioDesativadoAoBuscarUsuarioPublico() {
-
-        usuario.setAtivo(false);
-
-        when(usuarioRepository.findByMatricula("20230001"))
-                .thenReturn(Optional.of(usuario));
-
-        ResponseStatusException ex =
-                catchThrowableOfType(
-                        () -> usuarioService.buscarUsuario("20230001"),
-                        ResponseStatusException.class);
-
-        assertThat(ex.getStatusCode())
-                .isEqualTo(FORBIDDEN);
-    }
-
-    @Test
-    void deveLancar403AoAtualizarPerfilDeUsuarioDesativado() {
-
-        usuario.setAtivo(false);
-
-        when(usuarioRepository.findById(1L))
-                .thenReturn(Optional.of(usuario));
-
-        ResponseStatusException ex =
-                catchThrowableOfType(
-                        () -> usuarioService.atualizarPerfil(
-                                1L,
-                                new UpdatePerfilRequestDTO(null, true)),
-                        ResponseStatusException.class);
-
-        assertThat(ex.getStatusCode())
-                .isEqualTo(FORBIDDEN);
-
-        verify(usuarioRepository, never()).save(any());
-    }
-
-    @Test
-    void deveLancar403AoDesativarUsuarioJaDesativado() {
-
-        usuario.setAtivo(false);
-
-        when(usuarioRepository.findById(1L))
-                .thenReturn(Optional.of(usuario));
-
-        ResponseStatusException ex =
-                catchThrowableOfType(
-                        () -> usuarioService.desativarPerfil(1L),
-                        ResponseStatusException.class);
-
-        assertThat(ex.getStatusCode())
-                .isEqualTo(FORBIDDEN);
-
-        verify(usuarioRepository, never()).save(any());
+            verify(usuarioRepository, never()).save(any());
+        }
     }
 }
