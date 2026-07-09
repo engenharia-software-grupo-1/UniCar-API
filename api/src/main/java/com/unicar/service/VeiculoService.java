@@ -1,5 +1,6 @@
 package com.unicar.service;
 
+import com.unicar.domain.Usuario;
 import com.unicar.domain.Veiculo;
 import com.unicar.dto.veiculo.VeiculoRequestDTO;
 import com.unicar.dto.veiculo.VeiculoResponseDTO;
@@ -18,20 +19,20 @@ public class VeiculoService {
 
     private final VeiculoRepository veiculoRepository;
 
-    public List<VeiculoResponseDTO> listarPorUsuario(Long usuarioId) {
-        return veiculoRepository.findAllByUsuarioId(usuarioId).stream()
+    public List<VeiculoResponseDTO> listarPorUsuario(Usuario usuario) {
+        return veiculoRepository.findAllByUsuario(usuario).stream()
             .map(VeiculoResponseDTO::from)
             .toList();
     }
 
-    public VeiculoResponseDTO buscarPorId(Long usuarioId, Long veiculoId) {
-        return VeiculoResponseDTO.from(buscarVeiculo(usuarioId, veiculoId));
+    public VeiculoResponseDTO buscarPorId(Usuario usuario, Long veiculoId) {
+        return VeiculoResponseDTO.from(buscarVeiculo(usuario, veiculoId));
     }
 
     @Transactional
-    public VeiculoResponseDTO criar(Long usuarioId, VeiculoRequestDTO request) {
+    public VeiculoResponseDTO criar(Usuario usuario, VeiculoRequestDTO request) {
         Veiculo veiculo = Veiculo.builder()
-            .usuarioId(usuarioId)
+            .usuario(usuario)
             .modelo(request.modelo())
             .placa(request.placa())
             .cor(request.cor())
@@ -42,23 +43,26 @@ public class VeiculoService {
     }
 
     @Transactional
-    public VeiculoResponseDTO atualizar(Long usuarioId, Long veiculoId, VeiculoRequestDTO request) {
-        Veiculo veiculo = buscarVeiculo(usuarioId, veiculoId);
+    public VeiculoResponseDTO atualizar(Usuario usuario, Long veiculoId, VeiculoRequestDTO request) {
+        Veiculo veiculo = buscarVeiculo(usuario, veiculoId);
+
         veiculo.setModelo(request.modelo());
         veiculo.setPlaca(request.placa());
         veiculo.setCor(request.cor());
         veiculo.setTipoVeiculo(request.tipoVeiculo());
+
         return VeiculoResponseDTO.from(veiculoRepository.save(veiculo));
     }
 
     @Transactional
-    public void excluir(Long usuarioId, Long veiculoId) {
-        Veiculo veiculo = buscarVeiculo(usuarioId, veiculoId);
+    public void excluir(Usuario usuario, Long veiculoId) {
+        Veiculo veiculo = buscarVeiculo(usuario, veiculoId);
         veiculoRepository.delete(veiculo);
     }
 
-    private Veiculo buscarVeiculo(Long usuarioId, Long veiculoId) {
-        return veiculoRepository.findByIdAndUsuarioId(veiculoId, usuarioId)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Veículo não encontrado"));
+    private Veiculo buscarVeiculo(Usuario usuario, Long veiculoId) {
+        return veiculoRepository.findByIdAndUsuario(veiculoId, usuario)
+            .orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Veículo não encontrado"));
     }
 }

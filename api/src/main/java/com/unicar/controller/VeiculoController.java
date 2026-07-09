@@ -36,7 +36,7 @@ public class VeiculoController {
     @GetMapping
     @Operation(summary = "Lista os veículos do usuário autenticado")
     public ResponseEntity<List<VeiculoResponseDTO>> listar(@AuthenticationPrincipal UsuarioDetails userDetails) {
-        return ResponseEntity.ok(veiculoService.listarPorUsuario(userDetails.getUsuario().getId()));
+        return ResponseEntity.ok(veiculoService.listarPorUsuario(userDetails.getUsuario()));
     }
 
     @PostMapping
@@ -46,7 +46,7 @@ public class VeiculoController {
         @Valid @RequestBody VeiculoRequestDTO request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(veiculoService.criar(userDetails.getUsuario().getId(), request));
+            .body(veiculoService.criar(userDetails.getUsuario(), request));
     }
 
     @GetMapping("/{id}")
@@ -55,7 +55,7 @@ public class VeiculoController {
         @AuthenticationPrincipal UsuarioDetails userDetails,
         @PathVariable Long id
     ) {
-        return ResponseEntity.ok(veiculoService.buscarPorId(userDetails.getUsuario().getId(), id));
+        return ResponseEntity.ok(veiculoService.buscarPorId(userDetails.getUsuario(), id));
     }
 
     @PutMapping("/{id}")
@@ -65,13 +65,13 @@ public class VeiculoController {
         @PathVariable Long id,
         @Valid @RequestBody VeiculoRequestDTO request
     ) {
-        return ResponseEntity.ok(veiculoService.atualizar(userDetails.getUsuario().getId(), id, request));
+        return ResponseEntity.ok(veiculoService.atualizar(userDetails.getUsuario(), id, request));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Remove um veículo do usuário autenticado")
     public void excluir(@AuthenticationPrincipal UsuarioDetails userDetails, @PathVariable Long id) {
-        veiculoService.excluir(userDetails.getUsuario().getId(), id);
+        veiculoService.excluir(userDetails.getUsuario(), id);
     }
 }
