@@ -62,11 +62,11 @@ class VeiculoServiceTest {
         @Test
         @DisplayName("Deve listar os veículos do usuário")
         void deveListar() {
-            when(veiculoRepository.findAllByUsuario(usuario))
+            when(veiculoRepository.findAllByUsuarioId(usuario.getId()))
                 .thenReturn(List.of(veiculo));
 
             List<VeiculoResponseDTO> response =
-                veiculoService.listarPorUsuario(usuario);
+                veiculoService.listarPorUsuario(usuario.getId());
 
             assertThat(response)
                 .hasSize(1)
@@ -79,7 +79,7 @@ class VeiculoServiceTest {
                     assertThat(v.tipoVeiculo()).isEqualTo(TipoVeiculo.CARRO);
                 });
 
-            verify(veiculoRepository).findAllByUsuario(usuario);
+            verify(veiculoRepository).findAllByUsuarioId(usuario.getId());
         }
     }
 
@@ -90,32 +90,32 @@ class VeiculoServiceTest {
         @Test
         @DisplayName("Deve buscar veículo por id")
         void deveBuscar() {
-            when(veiculoRepository.findByIdAndUsuario(10L, usuario))
+            when(veiculoRepository.findByIdAndUsuarioId(10L, usuario.getId()))
                 .thenReturn(Optional.of(veiculo));
 
             VeiculoResponseDTO response =
-                veiculoService.buscarPorId(usuario, 10L);
+                veiculoService.buscarPorId(usuario.getId(), 10L);
 
             assertThat(response.id()).isEqualTo(10L);
             assertThat(response.modelo()).isEqualTo("Onix");
             assertThat(response.placa()).isEqualTo("ABC1234");
 
-            verify(veiculoRepository).findByIdAndUsuario(10L, usuario);
+            verify(veiculoRepository).findByIdAndUsuarioId(10L, usuario.getId());
         }
 
         @Test
         @DisplayName("Deve lançar exceção quando veículo não existir")
         void deveLancarExcecao() {
-            when(veiculoRepository.findByIdAndUsuario(10L, usuario))
+            when(veiculoRepository.findByIdAndUsuarioId(10L, usuario.getId()))
                 .thenReturn(Optional.empty());
 
             assertThatThrownBy(() ->
-                veiculoService.buscarPorId(usuario, 10L))
+                veiculoService.buscarPorId(usuario.getId(), 10L))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting("statusCode")
                 .isEqualTo(HttpStatus.NOT_FOUND);
 
-            verify(veiculoRepository).findByIdAndUsuario(10L, usuario);
+            verify(veiculoRepository).findByIdAndUsuarioId(10L, usuario.getId());
         }
     }
 
@@ -135,7 +135,7 @@ class VeiculoServiceTest {
                 });
 
             VeiculoResponseDTO response =
-                veiculoService.criar(usuario, request);
+                veiculoService.criar(usuario.getId(), request);
 
             assertThat(response.id()).isEqualTo(20L);
             assertThat(response.modelo()).isEqualTo(request.modelo());
@@ -155,20 +155,20 @@ class VeiculoServiceTest {
         @DisplayName("Deve atualizar veículo")
         void deveAtualizar() {
 
-            when(veiculoRepository.findByIdAndUsuario(10L, usuario))
+            when(veiculoRepository.findByIdAndUsuarioId(10L, usuario.getId()))
                 .thenReturn(Optional.of(veiculo));
 
             when(veiculoRepository.save(any(Veiculo.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
             VeiculoResponseDTO response =
-                veiculoService.atualizar(usuario, 10L, request);
+                veiculoService.atualizar(usuario.getId(), 10L, request);
 
             assertThat(response.modelo()).isEqualTo(request.modelo());
             assertThat(response.placa()).isEqualTo(request.placa());
             assertThat(response.cor()).isEqualTo(request.cor());
 
-            verify(veiculoRepository).findByIdAndUsuario(10L, usuario);
+            verify(veiculoRepository).findByIdAndUsuarioId(10L, usuario.getId());
             verify(veiculoRepository).save(veiculo);
         }
 
@@ -176,16 +176,16 @@ class VeiculoServiceTest {
         @DisplayName("Deve lançar exceção ao atualizar veículo inexistente")
         void deveLancarExcecao() {
 
-            when(veiculoRepository.findByIdAndUsuario(10L, usuario))
+            when(veiculoRepository.findByIdAndUsuarioId(10L, usuario.getId()))
                 .thenReturn(Optional.empty());
 
             assertThatThrownBy(() ->
-                veiculoService.atualizar(usuario, 10L, request))
+                veiculoService.atualizar(usuario.getId(), 10L, request))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting("statusCode")
                 .isEqualTo(HttpStatus.NOT_FOUND);
 
-            verify(veiculoRepository).findByIdAndUsuario(10L, usuario);
+            verify(veiculoRepository).findByIdAndUsuarioId(10L, usuario.getId());
             verify(veiculoRepository, never()).save(any());
         }
     }
@@ -198,12 +198,12 @@ class VeiculoServiceTest {
         @DisplayName("Deve excluir veículo")
         void deveExcluir() {
 
-            when(veiculoRepository.findByIdAndUsuario(10L, usuario))
+            when(veiculoRepository.findByIdAndUsuarioId(10L, usuario.getId()))
                 .thenReturn(Optional.of(veiculo));
 
-            veiculoService.excluir(usuario, 10L);
+            veiculoService.excluir(usuario.getId(), 10L);
 
-            verify(veiculoRepository).findByIdAndUsuario(10L, usuario);
+            verify(veiculoRepository).findByIdAndUsuarioId(10L, usuario.getId());
             verify(veiculoRepository).delete(veiculo);
         }
 
@@ -211,16 +211,16 @@ class VeiculoServiceTest {
         @DisplayName("Deve lançar exceção ao excluir veículo inexistente")
         void deveLancarExcecao() {
 
-            when(veiculoRepository.findByIdAndUsuario(10L, usuario))
+            when(veiculoRepository.findByIdAndUsuarioId(10L, usuario.getId()))
                 .thenReturn(Optional.empty());
 
             assertThatThrownBy(() ->
-                veiculoService.excluir(usuario, 10L))
+                veiculoService.excluir(usuario.getId(), 10L))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting("statusCode")
                 .isEqualTo(HttpStatus.NOT_FOUND);
 
-            verify(veiculoRepository).findByIdAndUsuario(10L, usuario);
+            verify(veiculoRepository).findByIdAndUsuarioId(10L, usuario.getId());
             verify(veiculoRepository, never()).delete(any());
         }
     }

@@ -19,20 +19,20 @@ public class VeiculoService {
 
     private final VeiculoRepository veiculoRepository;
 
-    public List<VeiculoResponseDTO> listarPorUsuario(Usuario usuario) {
-        return veiculoRepository.findAllByUsuario(usuario).stream()
+    public List<VeiculoResponseDTO> listarPorUsuario(Long usuarioId) {
+        return veiculoRepository.findAllByUsuarioId(usuarioId).stream()
             .map(VeiculoResponseDTO::from)
             .toList();
     }
 
-    public VeiculoResponseDTO buscarPorId(Usuario usuario, Long veiculoId) {
-        return VeiculoResponseDTO.from(buscarVeiculo(usuario, veiculoId));
+    public VeiculoResponseDTO buscarPorId(Long usuarioId, Long veiculoId) {
+        return VeiculoResponseDTO.from(buscarVeiculo(usuarioId, veiculoId));
     }
 
     @Transactional
-    public VeiculoResponseDTO criar(Usuario usuario, VeiculoRequestDTO request) {
+    public VeiculoResponseDTO criar(Long usuarioId, VeiculoRequestDTO request) {
         Veiculo veiculo = Veiculo.builder()
-            .usuario(usuario)
+            .usuario(Usuario.builder().id(usuarioId).build())
             .modelo(request.modelo())
             .placa(request.placa())
             .cor(request.cor())
@@ -43,8 +43,8 @@ public class VeiculoService {
     }
 
     @Transactional
-    public VeiculoResponseDTO atualizar(Usuario usuario, Long veiculoId, VeiculoRequestDTO request) {
-        Veiculo veiculo = buscarVeiculo(usuario, veiculoId);
+    public VeiculoResponseDTO atualizar(Long usuarioId, Long veiculoId, VeiculoRequestDTO request) {
+        Veiculo veiculo = buscarVeiculo(usuarioId, veiculoId);
 
         veiculo.setModelo(request.modelo());
         veiculo.setPlaca(request.placa());
@@ -55,13 +55,13 @@ public class VeiculoService {
     }
 
     @Transactional
-    public void excluir(Usuario usuario, Long veiculoId) {
-        Veiculo veiculo = buscarVeiculo(usuario, veiculoId);
+    public void excluir(Long usuarioId, Long veiculoId) {
+        Veiculo veiculo = buscarVeiculo(usuarioId, veiculoId);
         veiculoRepository.delete(veiculo);
     }
 
-    private Veiculo buscarVeiculo(Usuario usuario, Long veiculoId) {
-        return veiculoRepository.findByIdAndUsuario(veiculoId, usuario)
+    private Veiculo buscarVeiculo(Long usuarioId, Long veiculoId) {
+        return veiculoRepository.findByIdAndUsuarioId(veiculoId, usuarioId)
             .orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Veículo não encontrado"));
     }
