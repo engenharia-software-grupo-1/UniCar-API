@@ -9,8 +9,8 @@ public record PassageiroResponseDTO(
         Integer quantidadePassageiros
 ) {
 
-    public static PassageiroResponseDTO from(ReservaCarona reserva) {
-        return new PassageiroResponseDTO(
+    public PassageiroResponseDTO(ReservaCarona reserva) {
+        this(
                 reserva.getId(),
                 reserva.getUsuario().getId(),
                 reserva.getUsuario().getNome(),
