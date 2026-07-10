@@ -1,3 +1,5 @@
+CREATE TYPE tipo_veiculo AS ENUM ('CARRO', 'MOTO');
+
 CREATE TABLE veiculo (
  id BIGSERIAL PRIMARY KEY,
 
@@ -6,6 +8,7 @@ CREATE TABLE veiculo (
  modelo VARCHAR(100) NOT NULL,
  placa VARCHAR(20) NOT NULL UNIQUE,
  cor VARCHAR(50),
+ tipo_veiculo tipo_veiculo NOT NULL DEFAULT 'CARRO',
 
  CONSTRAINT fk_veiculo_usuario
      FOREIGN KEY (usuario_id)
@@ -26,3 +29,9 @@ COMMENT ON COLUMN veiculo.placa IS
 
 COMMENT ON COLUMN veiculo.cor IS
 'Cor do veículo.';
+
+COMMENT ON COLUMN veiculo.tipo_veiculo IS
+'Tipo do veículo: CARRO ou MOTO.';
+
+COMMENT ON TYPE tipo_veiculo IS
+'Tipo de veículo cadastrado na plataforma.';

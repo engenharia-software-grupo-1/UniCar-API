@@ -10,6 +10,9 @@ import org.springframework.stereotype.Service;
 import com.unicar.domain.Usuario;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.Date;
 
@@ -23,8 +26,29 @@ public class JwtService {
         @Value("${unicar.jwt.secret}") String secret,
         @Value("${unicar.jwt.expiration-ms:86400000}") long expiracaoMs
     ) {
-        this.secretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+        this.secretKey = construirSecretKey(secret);
         this.expiracaoMs = expiracaoMs;
+    }
+
+    private SecretKey construirSecretKey(String secret) {
+        String valor = secret == null ? "" : secret.trim();
+        if (valor.isBlank()) {
+            valor = "dev-secret-key-for-local-development";
+        }
+
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(valor);
+        } catch (IllegalArgumentException ex) {
+            keyBytes = valor.getBytes(StandardCharsets.UTF_8);
+        }
+
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return Keys.hmacShaKeyFor(digest.digest(keyBytes));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("Falha ao inicializar JWT", ex);
+        }
     }
 
     public String gerarToken(Usuario usuario) {
