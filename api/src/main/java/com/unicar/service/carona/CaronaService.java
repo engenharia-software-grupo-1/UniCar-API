@@ -34,6 +34,7 @@ import org.springframework.beans.factory.annotation.Value;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -241,6 +242,16 @@ public class CaronaService {
 
         if (carona.getStatus() != StatusCarona.CRIADA) {
             throw new EstadoInvalidoException("Só é possível iniciar caronas com status CRIADA. Status atual: " + carona.getStatus());
+        }
+
+        LocalDate hoje = LocalDate.now();
+        LocalDate diaPartida = carona.getDataHoraPartida().toLocalDate();
+
+        if (!hoje.isEqual(diaPartida)) {
+            String mensagem = hoje.isBefore(diaPartida)
+                    ? "A carona está agendada para uma data futura. Aguarde o dia da viagem para iniciá-la."
+                    : "A data da viagem já passou. Atualize a carona para uma nova data ou crie uma nova carona.";
+            throw new RegraDeNegocioException(mensagem);
         }
 
         carona.setStatus(StatusCarona.EM_ANDAMENTO);
