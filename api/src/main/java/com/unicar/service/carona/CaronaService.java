@@ -165,8 +165,7 @@ public class CaronaService {
         Carona carona = buscarCaronaParaAtualizacao(id);
         validarMotorista(carona, motoristaId);
 
-        boolean viagemJaIniciada = carona.getStatus() != StatusCarona.CRIADA || !carona.getDataHoraPartida().isAfter(LocalDateTime.now());
-        if (viagemJaIniciada) {
+        if (carona.getStatus() != StatusCarona.CRIADA) {
             throw new RegraDeNegocioException("Não é possível editar a carona após o início da viagem");
         }
 
