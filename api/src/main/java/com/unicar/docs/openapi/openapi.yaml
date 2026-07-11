@@ -490,6 +490,10 @@ components:
         cor:
           type: string
           example: Prata
+        tipoVeiculo:
+          type: string
+          example: CARRO
+          enum: CARRO, MOTO
 
     Veiculo:
       type: object
