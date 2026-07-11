@@ -22,11 +22,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unicar.domain.Usuario;
@@ -46,19 +48,17 @@ class UsuarioControllerTest {
     private MockMvc mockMvc;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-
+ 
     @MockitoBean
     private UsuarioService usuarioService;
-
+ 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
-
+ 
     private UsuarioDetails userDetails;
-    private UsernamePasswordAuthenticationToken authenticationToken;
-
+ 
     @BeforeEach
     void setUp() {
-
         Usuario usuario = Usuario.builder()
                 .id(1L)
                 .matricula("20230001")
@@ -70,172 +70,128 @@ class UsuarioControllerTest {
                 .receberEmail(true)
                 .genero(Genero.NAO_INFORMADO)
                 .build();
-
+ 
         userDetails = new UsuarioDetails(usuario);
-
-        authenticationToken = new UsernamePasswordAuthenticationToken(
-                userDetails,
-                null,
-                userDetails.getAuthorities()
-        );
-
+ 
+        UsernamePasswordAuthenticationToken authenticationToken =
+                new UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        null,
+                        userDetails.getAuthorities()
+                );
+ 
         SecurityContextHolder.getContext().setAuthentication(authenticationToken);
     }
-
+ 
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
     }
-
-
+ 
     @Nested
     @DisplayName("GET /usuarios/me")
     class BuscarPerfil {
-
+ 
         @Test
-        @DisplayName("deve retornar o perfil do usuário autenticado")
+        @DisplayName("deve retornar 200 e o perfil do usuário autenticado")
         void deveBuscarPerfil() throws Exception {
-
             UsuarioDTO dto = new UsuarioDTO(
-                    1L,
-                    "20230001",
-                    "Oscar Rodrigues",
-                    "oscar@teste.com",
-                    "12345678901",
-                    "Computação",
-                    Genero.NAO_INFORMADO.name(),
-                    true,
-                    LocalDateTime.now(),
-                    LocalDateTime.now()
+                    1L, "20230001", "Oscar Rodrigues", "oscar@teste.com",
+                    "12345678901", "Computação", Genero.NAO_INFORMADO.name(),
+                    true, LocalDateTime.now(), LocalDateTime.now()
             );
-
-            when(usuarioService.buscarPerfil(1L))
-                    .thenReturn(dto);
-
-
+ 
+            when(usuarioService.buscarPerfil(1L)).thenReturn(dto);
+ 
             mockMvc.perform(get("/usuarios/me"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$.id").value(1))
                     .andExpect(jsonPath("$.nome").value("Oscar Rodrigues"))
                     .andExpect(jsonPath("$.cpf").value("12345678901"));
-
-
+ 
             verify(usuarioService).buscarPerfil(1L);
         }
     }
-
-
+ 
     @Nested
     @DisplayName("GET /usuarios/{matricula}")
     class BuscarUsuario {
-
+ 
         @Test
-        @DisplayName("deve retornar usuário público pela matrícula")
+        @DisplayName("deve retornar 200 e o usuário público pela matrícula")
         void deveBuscarUsuarioPublico() throws Exception {
-
             UsuarioPublicoDTO dto = new UsuarioPublicoDTO(
-                    1L,
-                    "20230001",
-                    "Oscar Rodrigues",
-                    "oscar@teste.com",
-                    "Computação"
+                    1L, "20230001", "Oscar Rodrigues", "oscar@teste.com", "Computação"
             );
-
-
-            when(usuarioService.buscarUsuario("20230001"))
-                    .thenReturn(dto);
-
-
+ 
+            when(usuarioService.buscarUsuario("20230001")).thenReturn(dto);
+ 
             mockMvc.perform(get("/usuarios/20230001"))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$.id").value(1))
                     .andExpect(jsonPath("$.matricula").value("20230001"))
                     .andExpect(jsonPath("$.nome").value("Oscar Rodrigues"));
-
-
+ 
             verify(usuarioService).buscarUsuario("20230001");
         }
+ 
+        @Test
+        @DisplayName("deve retornar 404 quando a matrícula não existir")
+        void deveRetornar404QuandoMatriculaNaoExiste() throws Exception {
+            when(usuarioService.buscarUsuario("99999999"))
+                    .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
+ 
+            mockMvc.perform(get("/usuarios/99999999"))
+                    .andExpect(status().isNotFound());
+ 
+            verify(usuarioService).buscarUsuario("99999999");
+        }
     }
-
-
+ 
     @Nested
     @DisplayName("PATCH /usuarios/me")
     class AtualizarPerfil {
-
+ 
         @Test
-        @DisplayName("deve atualizar o perfil do usuário autenticado")
+        @DisplayName("deve retornar 200 e o perfil atualizado")
         void deveAtualizarPerfil() throws Exception {
-
-            UpdatePerfilRequestDTO request =
-                    new UpdatePerfilRequestDTO(
-                            Genero.MASCULINO,
-                            false
-                    );
-
-
+            UpdatePerfilRequestDTO request = new UpdatePerfilRequestDTO(Genero.MASCULINO, false);
+ 
             UsuarioDTO response = new UsuarioDTO(
-                    1L,
-                    "20230001",
-                    "Oscar Rodrigues",
-                    "oscar@teste.com",
-                    "12345678901",
-                    "Computação",
-                    Genero.MASCULINO.name(),
-                    false,
-                    LocalDateTime.now(),
-                    LocalDateTime.now()
+                    1L, "20230001", "Oscar Rodrigues", "oscar@teste.com",
+                    "12345678901", "Computação", Genero.MASCULINO.name(),
+                    false, LocalDateTime.now(), LocalDateTime.now()
             );
-
-
-            when(usuarioService.atualizarPerfil(
-                    eq(1L),
-                    any(UpdatePerfilRequestDTO.class)
-            )).thenReturn(response);
-
-
-
+ 
+            when(usuarioService.atualizarPerfil(eq(1L), any(UpdatePerfilRequestDTO.class)))
+                    .thenReturn(response);
+ 
             mockMvc.perform(patch("/usuarios/me")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.genero")
-                            .value("MASCULINO"))
-                    .andExpect(jsonPath("$.receberEmail")
-                            .value(false));
-
-
-            verify(usuarioService)
-                    .atualizarPerfil(
-                            eq(1L),
-                            any(UpdatePerfilRequestDTO.class)
-                    );
+                    .andExpect(jsonPath("$.genero").value("MASCULINO"))
+                    .andExpect(jsonPath("$.receberEmail").value(false));
+ 
+            verify(usuarioService).atualizarPerfil(eq(1L), any(UpdatePerfilRequestDTO.class));
         }
     }
-
-
-
+ 
     @Nested
     @DisplayName("DELETE /usuarios/me")
     class DesativarPerfil {
-
-
+ 
         @Test
-        @DisplayName("deve desativar o perfil do usuário autenticado")
+        @DisplayName("deve retornar 204 ao desativar o perfil do usuário autenticado")
         void deveDesativarPerfil() throws Exception {
-
-            doNothing()
-                    .when(usuarioService)
-                    .desativarPerfil(1L);
-
-
+            doNothing().when(usuarioService).desativarPerfil(1L);
+ 
             mockMvc.perform(delete("/usuarios/me"))
                     .andExpect(status().isNoContent());
-
-
-            verify(usuarioService)
-                    .desativarPerfil(1L);
+ 
+            verify(usuarioService).desativarPerfil(1L);
         }
     }
 }
