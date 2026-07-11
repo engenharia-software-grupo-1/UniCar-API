@@ -32,11 +32,11 @@ public class CaronaController {
 
     @PostMapping
     @Operation(summary = "Cria uma nova carona")
-    public ResponseEntity<CaronaResponseDTO> criar(
+    public ResponseEntity<List<CaronaResponseDTO>> criar(
             @Valid @RequestBody CaronaRequestDTO request,
             @AuthenticationPrincipal UsuarioDetails usuario) {
 
-        CaronaResponseDTO response = caronaService.criar(request, usuario.getUsuario().getId());
+        List<CaronaResponseDTO> response = caronaService.criar(request, usuario.getUsuario().getId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 

@@ -55,4 +55,10 @@ public interface CaronaRepository extends JpaRepository<Carona, Long> {
         com.unicar.enums.StatusCarona getStatus();
         Double getDistanciaKm();
     }
+
+    boolean existsByMotoristaIdAndDataHoraPartidaAndStatusIn(
+            Long motoristaId,
+            LocalDateTime dataHoraPartida,
+            List<StatusCarona> statuses
+    );
 }

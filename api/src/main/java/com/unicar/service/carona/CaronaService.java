@@ -53,7 +53,7 @@ public class CaronaService {
     private BigDecimal fatorValorPorKm;
 
     @Transactional
-    public CaronaResponseDTO criar(CaronaRequestDTO request, Long motoristaId) {
+    public List<CaronaResponseDTO> criar(CaronaRequestDTO request, Long motoristaId) {
         Usuario motorista = usuarioRepository.findByIdForUpdate(motoristaId)
             .orElseThrow(() -> new AcessoNegadoException("Usuário não encontrado"));
 
@@ -62,10 +62,6 @@ public class CaronaService {
 
         if (!veiculo.getUsuario().getId().equals(motoristaId)) {
             throw new AcessoNegadoException("O veículo não pertence ao usuário autenticado");
-        }
-
-        if (!request.dataHoraSaida().isAfter(LocalDateTime.now())) {
-            throw new RegraDeNegocioException("A data da viagem deve ser futura");
         }
 
         if (request.quantidadeVagas() == null || request.quantidadeVagas() <= 0) {
@@ -79,24 +75,41 @@ public class CaronaService {
 
         validarValorContribuicao(request.origem(), request.destino(), request.valorContribuicao());
 
-        Carona carona = Carona.builder()
-                .motorista(motorista)
-                .veiculo(veiculo)
-                .origemDescricao(request.origem().descricao())
-                .origemLatitude(request.origem().latitude())
-                .origemLongitude(request.origem().longitude())
-                .destinoDescricao(request.destino().descricao())
-                .destinoLatitude(request.destino().latitude())
-                .destinoLongitude(request.destino().longitude())
-                .pontoEncontroDescricao(request.pontoEncontro())
-                .dataHoraPartida(request.dataHoraSaida())
-                .vagasTotais(request.quantidadeVagas())
-                .valorContribuicao(request.valorContribuicao())
-                .status(StatusCarona.CRIADA)
-                .build();
+        List<Carona> caronasParaSalvar = request.datasHorasSaida().stream()
+                .map(dataHora -> {
+                    if (!dataHora.isAfter(LocalDateTime.now())) {
+                        throw new RegraDeNegocioException("Todas as datas da viagem devem ser futuras. Data inválida: " + dataHora);
+                    }
 
-        carona = caronaRepository.save(carona);
-        return new CaronaResponseDTO(carona.getId(), carona.getStatus());
+                    List<StatusCarona> statusAtivos = List.of(StatusCarona.CRIADA, StatusCarona.EM_ANDAMENTO);
+
+                    if (caronaRepository.existsByMotoristaIdAndDataHoraPartidaAndStatusIn(motoristaId, dataHora, statusAtivos)) {
+                        throw new RegraDeNegocioException("Você já possui uma carona agendada ou em andamento para o dia/horário: " + dataHora);
+                    }
+
+                    return Carona.builder()
+                            .motorista(motorista)
+                            .veiculo(veiculo)
+                            .origemDescricao(request.origem().descricao())
+                            .origemLatitude(request.origem().latitude())
+                            .origemLongitude(request.origem().longitude())
+                            .destinoDescricao(request.destino().descricao())
+                            .destinoLatitude(request.destino().latitude())
+                            .destinoLongitude(request.destino().longitude())
+                            .pontoEncontroDescricao(request.pontoEncontro())
+                            .dataHoraPartida(dataHora) // <-- Injeta a respectiva data da recorrência
+                            .vagasTotais(request.quantidadeVagas())
+                            .valorContribuicao(request.valorContribuicao())
+                            .status(StatusCarona.CRIADA)
+                            .build();
+                })
+                .toList();
+
+        List<Carona> caronasSalvas = caronaRepository.saveAll(caronasParaSalvar);
+
+        return caronasSalvas.stream()
+                .map(c -> new CaronaResponseDTO(c.getId(), c.getStatus()))
+                .toList();
     }
 
 
@@ -165,11 +178,13 @@ public class CaronaService {
         Carona carona = buscarCaronaParaAtualizacao(id);
         validarMotorista(carona, motoristaId);
 
+        LocalDateTime novaDataHora = request.datasHorasSaida().getFirst();
+
         if (carona.getStatus() != StatusCarona.CRIADA) {
             throw new RegraDeNegocioException("Não é possível editar a carona após o início da viagem");
         }
 
-        if (!request.dataHoraSaida().isAfter(LocalDateTime.now())) {
+        if (!novaDataHora.isAfter(LocalDateTime.now())) {
             throw new RegraDeNegocioException("A data da viagem deve ser futura");
         }
 
@@ -192,7 +207,7 @@ public class CaronaService {
         carona.setDestinoLatitude(request.destino().latitude());
         carona.setDestinoLongitude(request.destino().longitude());
         carona.setPontoEncontroDescricao(request.pontoEncontro());
-        carona.setDataHoraPartida(request.dataHoraSaida());
+        carona.setDataHoraPartida(novaDataHora);
         carona.setVagasTotais(request.quantidadeVagas());
         carona.setValorContribuicao(request.valorContribuicao());
 
