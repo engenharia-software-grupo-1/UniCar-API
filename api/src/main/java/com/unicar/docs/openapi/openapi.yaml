@@ -1725,11 +1725,13 @@ paths:
               $ref: '#/components/schemas/CaronaRequest'
       responses:
         '201':
-          description: Carona criada
+          description: Lista de caronas criadas com sucesso
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CaronaStatus'
+                type: array
+                items:
+                  $ref: '#/components/schemas/CaronaStatus'
         '400':
           description: Dados inválidos
           content:
