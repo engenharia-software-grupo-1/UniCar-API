@@ -121,10 +121,12 @@ public class CaronaService {
 
         if (carona.getStatus() == StatusCarona.FINALIZADA || carona.getStatus() == StatusCarona.CANCELADA) {
             throw new EstadoInvalidoException(
-                    "Não é possível atualizar a observação de uma carona com status " + carona.getStatus());
+                "Não é possível atualizar a observação de uma carona com status " + carona.getStatus());
         }
 
-        carona.setObservacao(request.observacao());
+        String observacao = request.observacao() != null ? request.observacao().trim() : null;
+        carona.setObservacao(observacao != null && observacao.isEmpty() ? null : observacao);
+
         carona = caronaRepository.save(carona);
         return new CaronaResponseDTO(carona.getId(), carona.getStatus());
     }
