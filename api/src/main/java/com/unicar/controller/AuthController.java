@@ -4,7 +4,6 @@ import com.unicar.dto.auth.LoginRequestDTO;
 import com.unicar.dto.auth.LoginResponseDTO;
 
 import com.unicar.service.auth.AuthService;
-import com.unicar.service.auth.BlacklistService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -13,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/auth")
@@ -32,7 +32,11 @@ public class AuthController {
     @Operation(summary = "Encerra a sessão do usuário autenticado")
     @SecurityRequirement(name = "bearerAuth")
     public void logout(@RequestHeader("Authorization") String authHeader) {
-        String token = authHeader.replace("Bearer ", "").trim();
+        if (authHeader == null || authHeader.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Header Authorization ausente.");
+        }
+
+        String token = authHeader.replaceFirst("(?i)^Bearer\\s+", "").trim();
         authService.logout(token);
     }
 }
