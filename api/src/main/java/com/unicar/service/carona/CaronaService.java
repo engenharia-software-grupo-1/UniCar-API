@@ -6,6 +6,7 @@ import com.unicar.domain.Usuario;
 import com.unicar.domain.Veiculo;
 import com.unicar.dto.carona.CaronaDetalheResponseDTO;
 import com.unicar.dto.carona.CaronaListItemResponseDTO;
+import com.unicar.dto.carona.CaronaObservacaoRequestDTO;
 import com.unicar.dto.carona.CaronaProximaResponseDTO;
 import com.unicar.dto.carona.CaronaRequestDTO;
 import com.unicar.dto.carona.CaronaResponseDTO;
@@ -80,25 +81,40 @@ public class CaronaService {
         validarValorContribuicao(request.origem(), request.destino(), request.valorContribuicao());
 
         Carona carona = Carona.builder()
-                .motorista(motorista)
-                .veiculo(veiculo)
-                .origemDescricao(request.origem().descricao())
-                .origemLatitude(request.origem().latitude())
-                .origemLongitude(request.origem().longitude())
-                .destinoDescricao(request.destino().descricao())
-                .destinoLatitude(request.destino().latitude())
-                .destinoLongitude(request.destino().longitude())
-                .pontoEncontroDescricao(request.pontoEncontro())
-                .dataHoraPartida(request.dataHoraSaida())
-                .vagasTotais(request.quantidadeVagas())
-                .valorContribuicao(request.valorContribuicao())
-                .status(StatusCarona.CRIADA)
-                .build();
+            .motorista(motorista)
+            .veiculo(veiculo)
+            .origemDescricao(request.origem().descricao())
+            .origemLatitude(request.origem().latitude())
+            .origemLongitude(request.origem().longitude())
+            .destinoDescricao(request.destino().descricao())
+            .destinoLatitude(request.destino().latitude())
+            .destinoLongitude(request.destino().longitude())
+            .pontoEncontroDescricao(request.pontoEncontro())
+            .observacao(request.observacao())
+            .dataHoraPartida(request.dataHoraSaida())
+            .vagasTotais(request.quantidadeVagas())
+            .valorContribuicao(request.valorContribuicao())
+            .status(StatusCarona.CRIADA)
+            .build();
 
         carona = caronaRepository.save(carona);
         return new CaronaResponseDTO(carona.getId(), carona.getStatus());
     }
 
+    @Transactional
+    public CaronaResponseDTO atualizarObservacao(Long id, CaronaObservacaoRequestDTO request, Long motoristaId) {
+        Carona carona = buscarCaronaParaAtualizacao(id);
+        validarMotorista(carona, motoristaId);
+
+        if (carona.getStatus() == StatusCarona.FINALIZADA || carona.getStatus() == StatusCarona.CANCELADA) {
+            throw new EstadoInvalidoException(
+                    "Não é possível atualizar a observação de uma carona com status " + carona.getStatus());
+        }
+
+        carona.setObservacao(request.observacao());
+        carona = caronaRepository.save(carona);
+        return new CaronaResponseDTO(carona.getId(), carona.getStatus());
+    }
 
     public List<CaronaListItemResponseDTO> listarMinhas(Long motoristaId) {
         return caronaRepository.findByMotorista_Id(motoristaId).stream()
@@ -127,6 +143,7 @@ public class CaronaService {
                 vagasDisponiveis,
                 carona.getValorContribuicao(),
                 carona.getStatus(),
+                carona.getObservacao(),
                 new MotoristaResumoDTO(carona.getMotorista().getId(), carona.getMotorista().getNome()),
                 new VeiculoResumoDTO(carona.getVeiculo().getId(), carona.getVeiculo().getModelo(), carona.getVeiculo().getCor())
         );
@@ -193,6 +210,7 @@ public class CaronaService {
         carona.setDestinoLongitude(request.destino().longitude());
         carona.setPontoEncontroDescricao(request.pontoEncontro());
         carona.setDataHoraPartida(request.dataHoraSaida());
+        carona.setObservacao(request.observacao());
         carona.setVagasTotais(request.quantidadeVagas());
         carona.setValorContribuicao(request.valorContribuicao());
 

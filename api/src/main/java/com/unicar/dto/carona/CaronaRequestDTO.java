@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -36,6 +37,8 @@ public record CaronaRequestDTO(
 
     @NotNull(message = "Valor de contribuição é obrigatório")
     @DecimalMin(value = "0.0", message = "Valor de contribuição deve ser positivo ou zero")
-    BigDecimal valorContribuicao
+    BigDecimal valorContribuicao,
 
+    @Size(max = 255, message = "A observação deve ter no máximo 255 caracteres")
+    String observacao
 ) {}

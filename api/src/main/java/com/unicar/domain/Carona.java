@@ -41,6 +41,9 @@ public class Carona {
     @Column(name = "destino_descricao", nullable = false, length = 255)
     private String destinoDescricao;
 
+    @Column(name = "observacao", nullable = true, length = 255)
+    private String observacao;
+
     @Column(name = "destino_latitude", nullable = false, precision = 10, scale = 8)
     private BigDecimal destinoLatitude;
 

@@ -2,6 +2,7 @@ package com.unicar.controller.carona;
 
 import com.unicar.dto.carona.CaronaDetalheResponseDTO;
 import com.unicar.dto.carona.CaronaListItemResponseDTO;
+import com.unicar.dto.carona.CaronaObservacaoRequestDTO;
 import com.unicar.dto.carona.CaronaRequestDTO;
 import com.unicar.dto.carona.CaronaResponseDTO;
 import com.unicar.dto.carona.PassageiroResponseDTO;
@@ -46,6 +47,17 @@ public class CaronaController {
             @AuthenticationPrincipal UsuarioDetails usuario) {
 
         return ResponseEntity.ok(caronaService.listarMinhas(usuario.getUsuario().getId()));
+    }
+
+    @PatchMapping("/{id}/observacao")
+    @Operation(summary = "Atualiza a observação de uma carona")
+    public ResponseEntity<CaronaResponseDTO> atualizarObservacao(
+            @PathVariable Long id,
+            @RequestBody @Valid CaronaObservacaoRequestDTO request,
+            @AuthenticationPrincipal UsuarioDetails usuario) {
+
+        CaronaResponseDTO response = caronaService.atualizarObservacao(id, request, usuario.getUsuario().getId());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")

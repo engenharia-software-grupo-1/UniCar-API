@@ -16,6 +16,8 @@ CREATE TABLE carona (
 
     data_hora_partida TIMESTAMP NOT NULL,
 
+    observacao VARCHAR(255),
+
     vagas_totais INTEGER NOT NULL,
 
     valor_contribuicao DECIMAL(10,2),
@@ -90,3 +92,6 @@ COMMENT ON COLUMN carona.status IS
 
 COMMENT ON COLUMN carona.data_criacao IS
 'Data de criação do registro da carona.';
+
+COMMENT ON COLUMN carona.observacao IS
+'Campo opcional para observações gerais do motorista sobre a carona, destinadas aos passageiros interessados.';

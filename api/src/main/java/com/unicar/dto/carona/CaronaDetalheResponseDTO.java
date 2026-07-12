@@ -15,6 +15,7 @@ public record CaronaDetalheResponseDTO (
     Integer vagasDisponiveis,
     BigDecimal valorContribuicao,
     StatusCarona status,
+    String observacao,
     MotoristaResumoDTO motorista,
     VeiculoResumoDTO veiculo
 ) {}
