@@ -1,15 +1,11 @@
 package com.unicar.dto.carona;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Future;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record CaronaRequestDTO(
 
@@ -27,9 +23,8 @@ public record CaronaRequestDTO(
     @NotBlank(message = "Ponto de encontro é obrigatório")
     String pontoEncontro,
 
-    @NotNull(message = "Data e hora de saída são obrigatórias")
-    @Future(message = "A data da viagem deve ser futura")
-    LocalDateTime dataHoraSaida,
+    @NotEmpty(message = "Pelo menos uma data e hora de saída deve ser informada")
+    List<@NotNull(message = "Data de saída inválida") @Future(message = "Todas as datas das viagens devem ser futuras") LocalDateTime> datasHorasSaida,
 
     @NotNull(message = "Quantidade de vagas é obrigatória")
     @Min(value = 1, message = "A quantidade de vagas deve ser maior que zero")

@@ -511,7 +511,7 @@ components:
 
     CaronaRequest:
       type: object
-      required: [veiculoId, origem, destino, dataHoraSaida, quantidadeVagas]
+      required: [veiculoId, origem, destino, datasHorasSaida, quantidadeVagas]
       properties:
         veiculoId:
           type: integer
@@ -522,11 +522,16 @@ components:
           $ref: '#/components/schemas/Coordenada'
         pontoEncontro:
           type: string
-          example: Portão principal
-        dataHoraSaida:
-          type: string
-          format: date-time
-          example: "2026-06-25T07:00:00"
+          example: Onde os passageiros te encontram
+        datasHorasSaida:
+          type: array
+          items:
+            type: string
+            format: date-time
+          example:
+            - "2026-07-12T07:30:00"
+            - "2026-07-13T07:30:00"
+            - "2026-07-14T07:30:00"
         quantidadeVagas:
           type: integer
           minimum: 1
@@ -1720,11 +1725,13 @@ paths:
               $ref: '#/components/schemas/CaronaRequest'
       responses:
         '201':
-          description: Carona criada
+          description: Lista de caronas criadas com sucesso
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CaronaStatus'
+                type: array
+                items:
+                  $ref: '#/components/schemas/CaronaStatus'
         '400':
           description: Dados inválidos
           content:
