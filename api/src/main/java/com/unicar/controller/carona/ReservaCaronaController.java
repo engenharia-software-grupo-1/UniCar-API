@@ -25,13 +25,13 @@ public class ReservaCaronaController {
     private final ReservaCaronaService reservaCaronaService;
 
 
-    @PatchMapping("/{id}/cancelar")
-    @Operation(summary = "Cancela uma reserva de carona")
-    public ResponseEntity<Void> cancelar(
+    @PatchMapping("/{id}/remover")
+    @Operation(summary = "Remove passageiro de uma carona")
+    public ResponseEntity<Void> remover(
             @PathVariable Long id,
             @AuthenticationPrincipal UsuarioDetails usuario) {
 
-        reservaCaronaService.cancelarReserva(id,usuario.getUsuario().getId());
+        reservaCaronaService.removerReserva(id,usuario.getUsuario().getId());
         return ResponseEntity.noContent().build();
     }
 }

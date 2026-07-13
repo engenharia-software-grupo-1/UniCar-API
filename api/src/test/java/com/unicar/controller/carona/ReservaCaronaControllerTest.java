@@ -62,18 +62,18 @@ class ReservaCaronaControllerTest {
     }
 
     @Nested
-    @DisplayName("PATCH /reservas/{id}/cancelar")
-    class CancelarReserva {
+    @DisplayName("PATCH /reservas/{id}/remover")
+    class RemoverReserva {
 
         @Test
-        @DisplayName("deve retornar 204 ao cancelar uma reserva")
-        void deveCancelarReserva() throws Exception {
+        @DisplayName("deve retornar 204 ao remover uma reserva")
+        void deveRemoverReserva() throws Exception {
 
-            mockMvc.perform(patch("/reservas/{id}/cancelar", 10L))
+            mockMvc.perform(patch("/reservas/{id}/remover", 10L))
             .andExpect(status().isNoContent());
 
             verify(reservaCaronaService)
-                    .cancelarReserva(10L, 1L);
+                    .removerReserva(10L, 1L);
         }
     }
 }
