@@ -515,7 +515,7 @@ components:
 
     CaronaRequest:
       type: object
-      required: [veiculoId, origem, destino, dataHoraSaida, quantidadeVagas]
+      required: [veiculoId, origem, destino, datasHorasSaida, quantidadeVagas]
       properties:
         veiculoId:
           type: integer
@@ -526,11 +526,16 @@ components:
           $ref: '#/components/schemas/Coordenada'
         pontoEncontro:
           type: string
-          example: Portão principal
-        dataHoraSaida:
-          type: string
-          format: date-time
-          example: "2026-06-25T07:00:00"
+          example: Onde os passageiros te encontram
+        datasHorasSaida:
+          type: array
+          items:
+            type: string
+            format: date-time
+          example:
+            - "2026-07-12T07:30:00"
+            - "2026-07-13T07:30:00"
+            - "2026-07-14T07:30:00"
         quantidadeVagas:
           type: integer
           minimum: 1
@@ -539,6 +544,11 @@ components:
           type: number
           format: float
           example: 5.00
+        observacao:
+          type: string
+          nullable: true
+          maxLength: 255
+          example: Só levo até 2 malas de bagagem
 
     CaronaStatus:
       type: object
@@ -599,6 +609,11 @@ components:
         status:
           type: string
           example: CRIADA
+        observacao:
+          type: string
+          nullable: true
+          maxLength: 255
+          example: Só levo até 2 malas de bagagem
         motorista:
           type: object
           properties:
@@ -620,6 +635,15 @@ components:
             cor:
               type: string
               example: Prata
+
+    CaronaObservacaoRequest:
+      type: object
+      properties:
+        observacao:
+          type: string
+          nullable: true
+          maxLength: 255
+          example: Só levo até 2 malas de bagagem
 
     CaronaPublica:
       type: object
@@ -1724,11 +1748,13 @@ paths:
               $ref: '#/components/schemas/CaronaRequest'
       responses:
         '201':
-          description: Carona criada
+          description: Lista de caronas criadas com sucesso
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CaronaStatus'
+                type: array
+                items:
+                  $ref: '#/components/schemas/CaronaStatus'
         '400':
           description: Dados inválidos
           content:
@@ -1927,6 +1953,64 @@ paths:
                 $ref: '#/components/schemas/ErrorMessage'
         '404':
           description: Carona não encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+  
+  /caronas/{id}/observacao:
+    patch:
+      tags: [ Caronas ]
+      summary: Atualiza a observação geral da carona
+      description: Permite ao motorista alterar a observação de uma carona já criada. Não é permitido em caronas finalizadas ou canceladas.
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          example: 10
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CaronaObservacaoRequest'
+      responses:
+        '200':
+          description: Observação atualizada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CaronaStatus'
+        '400':
+          description: Dados inválidos (ex. observação excede o tamanho máximo)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '403':
+          description: Usuário autenticado não é o motorista desta carona
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '404':
+          description: Carona não encontrada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
+        '409':
+          description: Carona em estado que não permite atualização (FINALIZADA ou CANCELADA)
           content:
             application/json:
               schema:
