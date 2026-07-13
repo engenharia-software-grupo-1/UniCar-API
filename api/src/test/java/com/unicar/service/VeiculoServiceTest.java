@@ -5,18 +5,18 @@ import com.unicar.domain.Veiculo;
 import com.unicar.dto.veiculo.VeiculoRequestDTO;
 import com.unicar.dto.veiculo.VeiculoResponseDTO;
 import com.unicar.enums.TipoVeiculo;
+import com.unicar.exception.VeiculoNaoEncontradoException;
 import com.unicar.repository.VeiculoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class VeiculoServiceTest {
@@ -111,9 +111,8 @@ class VeiculoServiceTest {
 
             assertThatThrownBy(() ->
                 veiculoService.buscarPorId(usuario.getId(), 10L))
-                .isInstanceOf(ResponseStatusException.class)
-                .extracting("statusCode")
-                .isEqualTo(HttpStatus.NOT_FOUND);
+                .isInstanceOf(VeiculoNaoEncontradoException.class)
+                .hasMessage("Veículo não encontrado");
 
             verify(veiculoRepository).findByIdAndUsuarioId(10L, usuario.getId());
         }
@@ -181,9 +180,8 @@ class VeiculoServiceTest {
 
             assertThatThrownBy(() ->
                 veiculoService.atualizar(usuario.getId(), 10L, request))
-                .isInstanceOf(ResponseStatusException.class)
-                .extracting("statusCode")
-                .isEqualTo(HttpStatus.NOT_FOUND);
+                .isInstanceOf(VeiculoNaoEncontradoException.class)
+                .hasMessage("Veículo não encontrado");
 
             verify(veiculoRepository).findByIdAndUsuarioId(10L, usuario.getId());
             verify(veiculoRepository, never()).save(any());
@@ -216,9 +214,8 @@ class VeiculoServiceTest {
 
             assertThatThrownBy(() ->
                 veiculoService.excluir(usuario.getId(), 10L))
-                .isInstanceOf(ResponseStatusException.class)
-                .extracting("statusCode")
-                .isEqualTo(HttpStatus.NOT_FOUND);
+                .isInstanceOf(VeiculoNaoEncontradoException.class)
+                .hasMessage("Veículo não encontrado");
 
             verify(veiculoRepository).findByIdAndUsuarioId(10L, usuario.getId());
             verify(veiculoRepository, never()).delete(any());

@@ -5,16 +5,18 @@ CREATE TABLE carona (
     veiculo_id BIGINT NOT NULL,
 
     origem_descricao VARCHAR(255) NOT NULL,
-    origem_latitude DECIMAL(11,8) NOT NULL,
+    origem_latitude DECIMAL(10,8) NOT NULL,
     origem_longitude DECIMAL(11,8) NOT NULL,
 
     destino_descricao VARCHAR(255) NOT NULL,
-    destino_latitude DECIMAL(11,8) NOT NULL,
+    destino_latitude DECIMAL(10,8) NOT NULL,
     destino_longitude DECIMAL(11,8) NOT NULL,
 
     ponto_encontro_descricao VARCHAR(255) NOT NULL,
 
     data_hora_partida TIMESTAMP NOT NULL,
+
+    observacao VARCHAR(255),
 
     vagas_totais INTEGER NOT NULL,
 
@@ -90,3 +92,6 @@ COMMENT ON COLUMN carona.status IS
 
 COMMENT ON COLUMN carona.data_criacao IS
 'Data de criação do registro da carona.';
+
+COMMENT ON COLUMN carona.observacao IS
+'Campo opcional para observações gerais do motorista sobre a carona, destinadas aos passageiros interessados.';

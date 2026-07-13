@@ -4,12 +4,11 @@ import com.unicar.domain.Usuario;
 import com.unicar.domain.Veiculo;
 import com.unicar.dto.veiculo.VeiculoRequestDTO;
 import com.unicar.dto.veiculo.VeiculoResponseDTO;
+import com.unicar.exception.VeiculoNaoEncontradoException;
 import com.unicar.repository.VeiculoRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -62,7 +61,6 @@ public class VeiculoService {
 
     private Veiculo buscarVeiculo(Long usuarioId, Long veiculoId) {
         return veiculoRepository.findByIdAndUsuarioId(veiculoId, usuarioId)
-            .orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Veículo não encontrado"));
+            .orElseThrow(() -> new VeiculoNaoEncontradoException("Veículo não encontrado"));
     }
 }
