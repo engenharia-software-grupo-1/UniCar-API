@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: unicar-api
+    runtime: java
+    rootDir: api
+    buildCommand: ./gradlew build -x test
+    startCommand: java -jar build/libs/*.jar
