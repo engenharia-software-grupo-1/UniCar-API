@@ -1,5 +1,6 @@
 package com.unicar.controller;
 
+import com.unicar.dto.usuario.PerfilUsuarioDTO;
 import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
 import com.unicar.dto.usuario.UsuarioDTO;
 import com.unicar.dto.usuario.UsuarioPublicoDTO;
@@ -51,5 +52,11 @@ public class UsuarioController {
     public ResponseEntity<Void> desativarPerfil(@AuthenticationPrincipal UsuarioDetails userDetails) {
         usuarioService.desativarPerfil(userDetails.getUsuario().getId());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/perfil-publico")
+    @Operation(summary = "Lista perfil público de um usuário")
+    public ResponseEntity<PerfilUsuarioDTO> perfilPublico(@PathVariable Long id, @AuthenticationPrincipal UsuarioDetails usuarioDetails){
+        return ResponseEntity.ok(usuarioService.perfilPublico(id));
     }
 }
