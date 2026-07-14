@@ -2,6 +2,7 @@ package com.unicar.controller.carona;
 
 import com.unicar.dto.carona.*;
 import com.unicar.security.UsuarioDetails;
+import com.unicar.service.carona.BuscaCaronaService;
 import com.unicar.service.carona.CaronaService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +26,7 @@ import java.util.List;
 public class CaronaController {
 
     private final CaronaService caronaService;
+    private final BuscaCaronaService buscaCaronaService;
 
     @PostMapping
     @Operation(summary = "Cria uma nova carona")
@@ -117,7 +119,7 @@ public class CaronaController {
             @AuthenticationPrincipal UsuarioDetails usuario) {
 
         List<CaronaBuscaResponseDTO> caronas =
-                caronaService.buscarCaronasDisponiveis(filtros, usuario.getUsuario().getId());
+                buscaCaronaService.buscarCaronasDisponiveis(filtros, usuario.getUsuario().getId());
         return ResponseEntity.ok(caronas);
     }
 }
