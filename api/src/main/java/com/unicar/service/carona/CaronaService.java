@@ -22,6 +22,7 @@ import com.unicar.repository.VeiculoRepository;
 import com.unicar.service.AvaliacaoService;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
@@ -364,30 +365,36 @@ public class CaronaService {
         }
     }
 
-    public List<CaronaBuscaResponseDTO> buscarCaronasDisponiveis(BuscaCaronaFiltroDTO filtro) {
-        double raio = (filtro.raioKm() != null && filtro.raioKm() > 0) ? filtro.raioKm() : RAIO_PADRAO_KM;
-        if (raio > RAIO_MAXIMO_KM) {
+    public List<CaronaBuscaResponseDTO> buscarCaronasDisponiveis(BuscaCaronaFiltroDTO filtro, Long usuarioAutenticadoId) {
+
+        double raioEfetivo = (filtro.raioKm() != null) ? filtro.raioKm() : RAIO_PADRAO_KM;
+
+        if (raioEfetivo > RAIO_MAXIMO_KM) {
             throw new RegraDeNegocioException("O raio de busca não pode ultrapassar " + RAIO_MAXIMO_KM + " km");
         }
-        double raioMetros = raio * 1000;
 
-        Double origLat = filtro.origemLatitude() != null ? filtro.origemLatitude().doubleValue() : null;
-        Double origLon = filtro.origemLongitude() != null ? filtro.origemLongitude().doubleValue() : null;
-        Double destLat = filtro.destinoLatitude() != null ? filtro.destinoLatitude().doubleValue() : null;
-        Double destLon = filtro.destinoLongitude() != null ? filtro.destinoLongitude().doubleValue() : null;
+        Specification<Carona> spec = Specification.where(CaronaSpecifications.comStatusCriada())
+                .and(CaronaSpecifications.comDataFutura())
+                .and(CaronaSpecifications.comVagasDisponiveis())
+                .and(CaronaSpecifications.semBloqueioBidirecional(usuarioAutenticadoId))
+                .and(CaronaSpecifications.comBoundingBox(filtro.origemLatitude(), filtro.origemLongitude(), raioEfetivo))
+                .and(CaronaSpecifications.comGeneroMotorista(filtro.generoMotorista()))
+                .and(CaronaSpecifications.comDataHoraSaida(filtro.dataHoraSaida()));
 
-        List<Carona> caronas = caronaRepository.buscarCaronasComFiltrosComplexos(
-                origLat, origLon, destLat, destLon, raioMetros,
-                filtro.generoMotorista(), filtro.cursoMotorista()
-        );
+        List<Carona> candidatas = caronaRepository.findAll(spec);
 
-        return caronas.stream()
+        List<Carona> dentroDoRaio = (filtro.origemLatitude() != null && filtro.origemLongitude() != null)
+                ? candidatas.stream()
+                .filter(c -> calcularDistanciaKm(
+                        filtro.origemLatitude(), filtro.origemLongitude(),
+                        c.getOrigemLatitude(), c.getOrigemLongitude())
+                        .doubleValue() <= raioEfetivo)
+                .toList()
+                : candidatas;
+
+        return dentroDoRaio.stream()
                 .map(c -> {
-                    int vagasConfirmadas = contarPassageirosConfirmados(c.getId());
-                    int vagasDisponiveis = c.getVagasTotais() - vagasConfirmadas;
-
-                    var reputacao = avaliacaoService.buscarReputacao(c.getMotorista().getId());
-
+                    ReputacaoDTO reputacao = avaliacaoService.buscarReputacao(c.getMotorista().getId());
                     return new CaronaBuscaResponseDTO(
                             c.getId(),
                             new EnderecoDTO(c.getOrigemDescricao(), c.getOrigemLatitude(), c.getOrigemLongitude()),
@@ -397,14 +404,11 @@ public class CaronaService {
                                     c.getMotorista().getNome(),
                                     c.getMotorista().getGenero().name(),
                                     c.getMotorista().getCurso(),
-                                    reputacao.media()
-                            ),
+                                    reputacao != null ? reputacao.media() : null),
                             c.getDataHoraPartida(),
-                            vagasDisponiveis,
-                            c.getValorContribuicao()
-                    );
+                            c.getVagasTotais(),
+                            c.getValorContribuicao());
                 })
-                .filter(dto -> dto.vagasDisponiveis() > 0)
                 .toList();
     }
 }

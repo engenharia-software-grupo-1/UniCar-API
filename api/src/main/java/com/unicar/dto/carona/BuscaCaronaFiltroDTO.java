@@ -1,8 +1,9 @@
 package com.unicar.dto.carona;
 
-import com.unicar.enums.Genero;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public record BuscaCaronaFiltroDTO(
         BigDecimal origemLatitude,
@@ -11,5 +12,7 @@ public record BuscaCaronaFiltroDTO(
         BigDecimal destinoLongitude,
         String generoMotorista,
         String cursoMotorista,
-        Double raioKm
+        Double raioKm,
+        @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+        LocalDateTime dataHoraSaida
 ) {}

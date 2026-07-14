@@ -112,8 +112,12 @@ public class CaronaController {
     }
 
     @GetMapping
-    public ResponseEntity<List<CaronaBuscaResponseDTO>> buscarCaronasDisponiveis(BuscaCaronaFiltroDTO filtros) {
-        List<CaronaBuscaResponseDTO> caronas = caronaService.buscarCaronasDisponiveis(filtros);
+    public ResponseEntity<List<CaronaBuscaResponseDTO>> buscarCaronasDisponiveis(
+            BuscaCaronaFiltroDTO filtros,
+            @AuthenticationPrincipal UsuarioDetails usuario) {
+
+        List<CaronaBuscaResponseDTO> caronas =
+                caronaService.buscarCaronasDisponiveis(filtros, usuario.getUsuario().getId());
         return ResponseEntity.ok(caronas);
     }
 }
