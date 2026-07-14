@@ -2,6 +2,9 @@ package com.unicar.service.carona;
 import com.unicar.domain.Carona;
 import com.unicar.domain.ReservaCarona;
 import com.unicar.domain.Usuario;
+import com.unicar.dto.avaliacao.ReputacaoDTO;
+import com.unicar.dto.carona.BuscaCaronaFiltroDTO;
+import com.unicar.dto.carona.CaronaBuscaResponseDTO;
 import com.unicar.dto.carona.PassageiroResponseDTO;
 import com.unicar.enums.StatusCarona;
 import com.unicar.enums.StatusReserva;
@@ -12,6 +15,7 @@ import com.unicar.exception.RegraDeNegocioException;
 import com.unicar.repository.CaronaRepository;
 import com.unicar.repository.ReservaCaronaRepository;
 
+import com.unicar.service.AvaliacaoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -20,7 +24,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.jpa.domain.Specification;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -33,6 +39,8 @@ class CaronaServiceTest {
     private CaronaRepository caronaRepository;
     @Mock
     private ReservaCaronaRepository reservaCaronaRepository;
+    @Mock
+    private AvaliacaoService avaliacaoService;
     @InjectMocks
     private CaronaService caronaService;
     private final Long caronaId = 1L;
