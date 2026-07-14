@@ -1,11 +1,6 @@
 package com.unicar.controller.carona;
 
-import com.unicar.dto.carona.CaronaDetalheResponseDTO;
-import com.unicar.dto.carona.CaronaListItemResponseDTO;
-import com.unicar.dto.carona.CaronaObservacaoRequestDTO;
-import com.unicar.dto.carona.CaronaRequestDTO;
-import com.unicar.dto.carona.CaronaResponseDTO;
-import com.unicar.dto.carona.PassageiroResponseDTO;
+import com.unicar.dto.carona.*;
 import com.unicar.security.UsuarioDetails;
 import com.unicar.service.carona.CaronaService;
 
@@ -114,5 +109,11 @@ public class CaronaController {
 
         caronaService.finalizarCarona(id,usuario.getUsuario().getId());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping
+    public ResponseEntity<List<CaronaBuscaResponseDTO>> buscarCaronasDisponiveis(BuscaCaronaFiltroDTO filtros) {
+        List<CaronaBuscaResponseDTO> caronas = caronaService.buscarCaronasDisponiveis(filtros);
+        return ResponseEntity.ok(caronas);
     }
 }

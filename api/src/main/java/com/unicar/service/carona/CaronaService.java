@@ -4,16 +4,8 @@ import com.unicar.domain.Carona;
 import com.unicar.domain.ReservaCarona;
 import com.unicar.domain.Usuario;
 import com.unicar.domain.Veiculo;
-import com.unicar.dto.carona.CaronaDetalheResponseDTO;
-import com.unicar.dto.carona.CaronaListItemResponseDTO;
-import com.unicar.dto.carona.CaronaObservacaoRequestDTO;
-import com.unicar.dto.carona.CaronaProximaResponseDTO;
-import com.unicar.dto.carona.CaronaRequestDTO;
-import com.unicar.dto.carona.CaronaResponseDTO;
-import com.unicar.dto.carona.EnderecoDTO;
-import com.unicar.dto.carona.MotoristaResumoDTO;
-import com.unicar.dto.carona.PassageiroResponseDTO;
-import com.unicar.dto.carona.VeiculoResumoDTO;
+import com.unicar.dto.avaliacao.ReputacaoDTO;
+import com.unicar.dto.carona.*;
 import com.unicar.enums.StatusCarona;
 import com.unicar.enums.StatusReserva;
 import com.unicar.exception.AcessoNegadoException;
@@ -27,6 +19,7 @@ import com.unicar.repository.ReservaCaronaRepository;
 import com.unicar.repository.UsuarioRepository;
 import com.unicar.repository.VeiculoRepository;
 
+import com.unicar.service.AvaliacaoService;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
@@ -45,10 +38,12 @@ public class CaronaService {
     private static final List<StatusReserva> RESERVAS_ATIVAS = List.of(StatusReserva.PENDENTE, StatusReserva.ACEITA);
     private static final double RAIO_PADRAO_KM = 5.0;
     private static final double RAIO_MAXIMO_KM = 100.0;
+
     private final CaronaRepository caronaRepository;
     private final UsuarioRepository usuarioRepository;
     private final VeiculoRepository veiculoRepository;
     private final ReservaCaronaRepository reservaCaronaRepository;
+    private final AvaliacaoService avaliacaoService;
 
     @Value("${unicar.carona.fator-valor-por-km:1.00}")
     private BigDecimal fatorValorPorKm;
@@ -367,5 +362,49 @@ public class CaronaService {
         if (!carona.getMotorista().getId().equals(usuarioId)) {
             throw new AcessoNegadoException("Usuário não é o motorista desta carona");
         }
+    }
+
+    public List<CaronaBuscaResponseDTO> buscarCaronasDisponiveis(BuscaCaronaFiltroDTO filtro) {
+        double raio = (filtro.raioKm() != null && filtro.raioKm() > 0) ? filtro.raioKm() : RAIO_PADRAO_KM;
+        if (raio > RAIO_MAXIMO_KM) {
+            throw new RegraDeNegocioException("O raio de busca não pode ultrapassar " + RAIO_MAXIMO_KM + " km");
+        }
+        double raioMetros = raio * 1000;
+
+        Double origLat = filtro.origemLatitude() != null ? filtro.origemLatitude().doubleValue() : null;
+        Double origLon = filtro.origemLongitude() != null ? filtro.origemLongitude().doubleValue() : null;
+        Double destLat = filtro.destinoLatitude() != null ? filtro.destinoLatitude().doubleValue() : null;
+        Double destLon = filtro.destinoLongitude() != null ? filtro.destinoLongitude().doubleValue() : null;
+
+        List<Carona> caronas = caronaRepository.buscarCaronasComFiltrosComplexos(
+                origLat, origLon, destLat, destLon, raioMetros,
+                filtro.generoMotorista(), filtro.cursoMotorista()
+        );
+
+        return caronas.stream()
+                .map(c -> {
+                    int vagasConfirmadas = contarPassageirosConfirmados(c.getId());
+                    int vagasDisponiveis = c.getVagasTotais() - vagasConfirmadas;
+
+                    var reputacao = avaliacaoService.buscarReputacao(c.getMotorista().getId());
+
+                    return new CaronaBuscaResponseDTO(
+                            c.getId(),
+                            new EnderecoDTO(c.getOrigemDescricao(), c.getOrigemLatitude(), c.getOrigemLongitude()),
+                            new EnderecoDTO(c.getDestinoDescricao(), c.getDestinoLatitude(), c.getDestinoLongitude()),
+                            new MotoristaBuscaDTO(
+                                    c.getMotorista().getId(),
+                                    c.getMotorista().getNome(),
+                                    c.getMotorista().getGenero().name(),
+                                    c.getMotorista().getCurso(),
+                                    reputacao.media()
+                            ),
+                            c.getDataHoraPartida(),
+                            vagasDisponiveis,
+                            c.getValorContribuicao()
+                    );
+                })
+                .filter(dto -> dto.vagasDisponiveis() > 0)
+                .toList();
     }
 }
