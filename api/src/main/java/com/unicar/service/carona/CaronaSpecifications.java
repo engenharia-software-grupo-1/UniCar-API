@@ -22,6 +22,14 @@ public class CaronaSpecifications {
         return (root, query, cb) -> cb.greaterThan(root.get("dataHoraPartida"), LocalDateTime.now());
     }
 
+    public static Specification<Carona> comCursoMotorista(String curso) {
+        return (root, query, cb) -> {
+            if (curso == null) return cb.conjunction();
+            Join<Carona, Usuario> motorista = root.join("motorista");
+            return cb.like(cb.upper(motorista.get("curso")), "%" + curso.toUpperCase() + "%");
+        };
+    }
+
     public static Specification<Carona> comBoundingBox(BigDecimal lat, BigDecimal lon, double raioKm) {
         return (root, query, cb) -> {
             if (lat == null || lon == null) return cb.conjunction();

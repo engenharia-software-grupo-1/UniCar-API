@@ -4,7 +4,6 @@ import com.unicar.domain.Carona;
 import com.unicar.domain.ReservaCarona;
 import com.unicar.domain.Usuario;
 import com.unicar.domain.Veiculo;
-import com.unicar.dto.avaliacao.ReputacaoDTO;
 import com.unicar.dto.carona.*;
 import com.unicar.enums.StatusCarona;
 import com.unicar.enums.StatusReserva;
@@ -14,15 +13,13 @@ import com.unicar.exception.EstadoInvalidoException;
 import com.unicar.exception.RegraDeNegocioException;
 import com.unicar.exception.VeiculoNaoEncontradoException;
 import com.unicar.repository.CaronaRepository;
-import com.unicar.repository.CaronaRepository.CaronaProximaProjection;
 import com.unicar.repository.ReservaCaronaRepository;
 import com.unicar.repository.UsuarioRepository;
 import com.unicar.repository.VeiculoRepository;
 
-import com.unicar.service.AvaliacaoService;
+import com.unicar.util.GeoUtils;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,18 +30,20 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Responsável pelo ciclo de vida da carona (criar, editar, iniciar,
+ * finalizar, cancelar), sempre a partir da perspectiva do motorista dono.
+ * A busca de caronas disponíveis para passageiros vive em BuscaCaronaService.
+ */
 @Service
 @RequiredArgsConstructor
 public class CaronaService {
     private static final List<StatusReserva> RESERVAS_ATIVAS = List.of(StatusReserva.PENDENTE, StatusReserva.ACEITA);
-    private static final double RAIO_PADRAO_KM = 5.0;
-    private static final double RAIO_MAXIMO_KM = 100.0;
 
     private final CaronaRepository caronaRepository;
     private final UsuarioRepository usuarioRepository;
     private final VeiculoRepository veiculoRepository;
     private final ReservaCaronaRepository reservaCaronaRepository;
-    private final AvaliacaoService avaliacaoService;
 
     @Value("${unicar.carona.fator-valor-por-km:1.00}")
     private BigDecimal fatorValorPorKm;
@@ -52,7 +51,7 @@ public class CaronaService {
     @Transactional
     public List<CaronaResponseDTO> criar(CaronaRequestDTO request, Long motoristaId) {
         Usuario motorista = usuarioRepository.findByIdForUpdate(motoristaId)
-            .orElseThrow(() -> new AcessoNegadoException("Usuário não encontrado"));
+                .orElseThrow(() -> new AcessoNegadoException("Usuário não encontrado"));
 
         Veiculo veiculo = veiculoRepository.findById(request.veiculoId())
                 .orElseThrow(() -> new VeiculoNaoEncontradoException("Veículo não encontrado"));
@@ -85,21 +84,21 @@ public class CaronaService {
                     }
 
                     return Carona.builder()
-                        .motorista(motorista)
-                        .veiculo(veiculo)
-                        .origemDescricao(request.origem().descricao())
-                        .origemLatitude(request.origem().latitude())
-                        .origemLongitude(request.origem().longitude())
-                        .destinoDescricao(request.destino().descricao())
-                        .destinoLatitude(request.destino().latitude())
-                        .destinoLongitude(request.destino().longitude())
-                        .pontoEncontroDescricao(request.pontoEncontro())
-                        .observacao(request.observacao())
-                        .dataHoraPartida(dataHora) // <-- Injeta a respectiva data da recorrência
-                        .vagasTotais(request.quantidadeVagas())
-                        .valorContribuicao(request.valorContribuicao())
-                        .status(StatusCarona.CRIADA)
-                        .build();
+                            .motorista(motorista)
+                            .veiculo(veiculo)
+                            .origemDescricao(request.origem().descricao())
+                            .origemLatitude(request.origem().latitude())
+                            .origemLongitude(request.origem().longitude())
+                            .destinoDescricao(request.destino().descricao())
+                            .destinoLatitude(request.destino().latitude())
+                            .destinoLongitude(request.destino().longitude())
+                            .pontoEncontroDescricao(request.pontoEncontro())
+                            .observacao(request.observacao())
+                            .dataHoraPartida(dataHora)
+                            .vagasTotais(request.quantidadeVagas())
+                            .valorContribuicao(request.valorContribuicao())
+                            .status(StatusCarona.CRIADA)
+                            .build();
                 })
                 .toList();
 
@@ -117,7 +116,7 @@ public class CaronaService {
 
         if (carona.getStatus() == StatusCarona.FINALIZADA || carona.getStatus() == StatusCarona.CANCELADA) {
             throw new EstadoInvalidoException(
-                "Não é possível atualizar a observação de uma carona com status " + carona.getStatus());
+                    "Não é possível atualizar a observação de uma carona com status " + carona.getStatus());
         }
 
         String observacao = request.observacao() != null ? request.observacao().trim() : null;
@@ -158,34 +157,6 @@ public class CaronaService {
                 new MotoristaResumoDTO(carona.getMotorista().getId(), carona.getMotorista().getNome()),
                 new VeiculoResumoDTO(carona.getVeiculo().getId(), carona.getVeiculo().getModelo(), carona.getVeiculo().getCor())
         );
-    }
-
-    public List<CaronaProximaResponseDTO> buscarProximas(BigDecimal latitude, BigDecimal longitude, Double raioKm) {
-        if (latitude == null || longitude == null) {
-            throw new RegraDeNegocioException("Latitude e longitude são obrigatórias para a busca por proximidade");
-        }
- 
-        double raio = (raioKm != null && raioKm > 0) ? raioKm : RAIO_PADRAO_KM;
-        if (raio > RAIO_MAXIMO_KM) {
-            throw new RegraDeNegocioException("O raio de busca não pode ultrapassar " + RAIO_MAXIMO_KM + " km");
-        }
- 
-        double raioMetros = raio * 1000;
- 
-        List<CaronaProximaProjection> caronasProximas =
-                caronaRepository.buscarCaronasProximas(latitude, longitude, raioMetros);
- 
-        return caronasProximas.stream()
-                .map(p -> new CaronaProximaResponseDTO(
-                        p.getId(),
-                        new EnderecoDTO(p.getOrigemDescricao(), p.getOrigemLatitude(), p.getOrigemLongitude()),
-                        new EnderecoDTO(p.getDestinoDescricao(), p.getDestinoLatitude(), p.getDestinoLongitude()),
-                        p.getStatus(),
-                        p.getDataHoraPartida(),
-                        p.getVagasTotais() - contarPassageirosConfirmados(p.getId()),
-                        BigDecimal.valueOf(p.getDistanciaKm()).setScale(2, RoundingMode.HALF_UP)))
-                .filter(dto -> dto.vagasDisponiveis() > 0)
-                .toList();
     }
 
     @Transactional
@@ -315,43 +286,18 @@ public class CaronaService {
     }
 
     private void validarValorContribuicao(EnderecoDTO origem, EnderecoDTO destino, BigDecimal valorContribuicao) {
-        BigDecimal distanciaKm = calcularDistanciaKm(
+        BigDecimal distanciaKm = GeoUtils.calcularDistanciaKm(
                 origem.latitude(), origem.longitude(),
                 destino.latitude(), destino.longitude());
- 
+
         BigDecimal valorMaximo = distanciaKm.multiply(fatorValorPorKm).setScale(2, RoundingMode.HALF_UP);
- 
+
         if (valorContribuicao.compareTo(valorMaximo) > 0) {
             throw new RegraDeNegocioException(
                     String.format(
                             "O valor de contribuição (R$ %.2f) ultrapassa o limite permitido de R$ %.2f para %.2f km",
                             valorContribuicao, valorMaximo, distanciaKm));
         }
-    }
-
-    /**
-     * Calcula a distância em km entre dois pontos usando Haversine.
-     * Usado para validar a contribuição antes de salvar a carona.
-     * A busca por caronas próximas usa earthdistance/cube no banco,
-     * pois o cálculo é executado sobre várias caronas cadastradas.
-     * Por isso, não é aplicado aqui.
-     */
-    private BigDecimal calcularDistanciaKm(BigDecimal lat1, BigDecimal lon1, BigDecimal lat2, BigDecimal lon2) {
-        final double raioTerraKm = 6371;
-
-        double lat1Rad = Math.toRadians(lat1.doubleValue());
-        double lat2Rad = Math.toRadians(lat2.doubleValue());
-        double dLat = Math.toRadians(lat2.doubleValue() - lat1.doubleValue());
-        double dLon = Math.toRadians(lon2.doubleValue() - lon1.doubleValue());
-
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(lat1Rad) * Math.cos(lat2Rad)
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        double distancia = raioTerraKm * c;
-
-        return BigDecimal.valueOf(distancia).setScale(2, RoundingMode.HALF_UP);
     }
 
     private Carona buscarCarona(Long id) {
@@ -363,52 +309,5 @@ public class CaronaService {
         if (!carona.getMotorista().getId().equals(usuarioId)) {
             throw new AcessoNegadoException("Usuário não é o motorista desta carona");
         }
-    }
-
-    public List<CaronaBuscaResponseDTO> buscarCaronasDisponiveis(BuscaCaronaFiltroDTO filtro, Long usuarioAutenticadoId) {
-
-        double raioEfetivo = (filtro.raioKm() != null) ? filtro.raioKm() : RAIO_PADRAO_KM;
-
-        if (raioEfetivo > RAIO_MAXIMO_KM) {
-            throw new RegraDeNegocioException("O raio de busca não pode ultrapassar " + RAIO_MAXIMO_KM + " km");
-        }
-
-        Specification<Carona> spec = Specification.where(CaronaSpecifications.comStatusCriada())
-                .and(CaronaSpecifications.comDataFutura())
-                .and(CaronaSpecifications.comVagasDisponiveis())
-                .and(CaronaSpecifications.semBloqueioBidirecional(usuarioAutenticadoId))
-                .and(CaronaSpecifications.comBoundingBox(filtro.origemLatitude(), filtro.origemLongitude(), raioEfetivo))
-                .and(CaronaSpecifications.comGeneroMotorista(filtro.generoMotorista()))
-                .and(CaronaSpecifications.comDataHoraSaida(filtro.dataHoraSaida()));
-
-        List<Carona> candidatas = caronaRepository.findAll(spec);
-
-        List<Carona> dentroDoRaio = (filtro.origemLatitude() != null && filtro.origemLongitude() != null)
-                ? candidatas.stream()
-                .filter(c -> calcularDistanciaKm(
-                        filtro.origemLatitude(), filtro.origemLongitude(),
-                        c.getOrigemLatitude(), c.getOrigemLongitude())
-                        .doubleValue() <= raioEfetivo)
-                .toList()
-                : candidatas;
-
-        return dentroDoRaio.stream()
-                .map(c -> {
-                    ReputacaoDTO reputacao = avaliacaoService.buscarReputacao(c.getMotorista().getId());
-                    return new CaronaBuscaResponseDTO(
-                            c.getId(),
-                            new EnderecoDTO(c.getOrigemDescricao(), c.getOrigemLatitude(), c.getOrigemLongitude()),
-                            new EnderecoDTO(c.getDestinoDescricao(), c.getDestinoLatitude(), c.getDestinoLongitude()),
-                            new MotoristaBuscaDTO(
-                                    c.getMotorista().getId(),
-                                    c.getMotorista().getNome(),
-                                    c.getMotorista().getGenero().name(),
-                                    c.getMotorista().getCurso(),
-                                    reputacao != null ? reputacao.media() : null),
-                            c.getDataHoraPartida(),
-                            c.getVagasTotais(),
-                            c.getValorContribuicao());
-                })
-                .toList();
     }
 }
