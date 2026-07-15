@@ -26,6 +26,7 @@ import com.unicar.repository.CaronaRepository.CaronaProximaProjection;
 import com.unicar.repository.ReservaCaronaRepository;
 import com.unicar.repository.UsuarioRepository;
 import com.unicar.repository.VeiculoRepository;
+import com.unicar.util.GeoUtils;
 
 import lombok.RequiredArgsConstructor;
 
@@ -319,43 +320,18 @@ public class CaronaService {
     }
 
     private void validarValorContribuicao(EnderecoDTO origem, EnderecoDTO destino, BigDecimal valorContribuicao) {
-        BigDecimal distanciaKm = calcularDistanciaKm(
+        BigDecimal distanciaKm = GeoUtils.calcularDistanciaKm(
                 origem.latitude(), origem.longitude(),
                 destino.latitude(), destino.longitude());
- 
+
         BigDecimal valorMaximo = distanciaKm.multiply(fatorValorPorKm).setScale(2, RoundingMode.HALF_UP);
- 
+
         if (valorContribuicao.compareTo(valorMaximo) > 0) {
             throw new RegraDeNegocioException(
                     String.format(
                             "O valor de contribuição (R$ %.2f) ultrapassa o limite permitido de R$ %.2f para %.2f km",
                             valorContribuicao, valorMaximo, distanciaKm));
         }
-    }
-
-    /**
-     * Calcula a distância em km entre dois pontos usando Haversine.
-     * Usado para validar a contribuição antes de salvar a carona.
-     * A busca por caronas próximas usa earthdistance/cube no banco,
-     * pois o cálculo é executado sobre várias caronas cadastradas.
-     * Por isso, não é aplicado aqui.
-     */
-    private BigDecimal calcularDistanciaKm(BigDecimal lat1, BigDecimal lon1, BigDecimal lat2, BigDecimal lon2) {
-        final double raioTerraKm = 6371;
-
-        double lat1Rad = Math.toRadians(lat1.doubleValue());
-        double lat2Rad = Math.toRadians(lat2.doubleValue());
-        double dLat = Math.toRadians(lat2.doubleValue() - lat1.doubleValue());
-        double dLon = Math.toRadians(lon2.doubleValue() - lon1.doubleValue());
-
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(lat1Rad) * Math.cos(lat2Rad)
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-
-        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        double distancia = raioTerraKm * c;
-
-        return BigDecimal.valueOf(distancia).setScale(2, RoundingMode.HALF_UP);
     }
 
     private Carona buscarCarona(Long id) {

@@ -11,4 +11,7 @@ public interface ReservaCaronaRepository extends JpaRepository<ReservaCarona, Lo
     List<ReservaCarona> findByCaronaIdAndStatusIn(Long caronaId, List<StatusReserva> statusList);
     List<ReservaCarona> findByCaronaIdAndStatus(Long caronaId,StatusReserva status);
     List<ReservaCarona> findByCaronaId(Long caronaId);
+    boolean existsByCarona_IdAndUsuario_IdAndStatusIn(Long caronaId, Long usuarioId, List<StatusReserva> statusList);
+    List<ReservaCarona> findByUsuario_Id(Long usuarioId);
+    List<ReservaCarona> findByCarona_Motorista_Id(Long motoristaId);
 }
