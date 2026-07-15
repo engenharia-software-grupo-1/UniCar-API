@@ -104,7 +104,8 @@ class AuthServiceTest {
                     {
                       "matricula_do_estudante": "2021001",
                       "nome_do_curso": "Ciência da Computação",
-                      "sexo": "M"
+                      "sexo": "M",
+                      "cpf": "12345678900"
                     }
                     """, MediaType.APPLICATION_JSON));
  
@@ -145,7 +146,7 @@ class AuthServiceTest {
  
             mockServer.expect(requestToUriTemplate(PROFESSOR_URL + "?professor={siape}", "555111"))
                 .andRespond(withSuccess("""
-                    [{"matriculaDoDocente": 555111}]
+                    [{"matriculaDoDocente": 555111, "cpf": "98765432100"}]
                     """, MediaType.APPLICATION_JSON));
  
             given(usuarioRepository.findByCpf("98765432100")).willReturn(Optional.empty());
@@ -184,7 +185,8 @@ class AuthServiceTest {
                     {
                       "matricula_do_estudante": "2020099",
                       "nome_do_curso": "Engenharia de Software",
-                      "sexo": "M"
+                      "sexo": "M",
+                      "cpf": "11122233344"
                     }
                     """, MediaType.APPLICATION_JSON));
  
@@ -263,6 +265,175 @@ class AuthServiceTest {
                 .hasFieldOrPropertyWithValue("statusCode", HttpStatus.BAD_GATEWAY);
         }
  
+        @Test
+        void deveSanitizarCpfFormatadoAntesDeGravar() {
+            mockServer.expect(requestTo(TOKEN_URL))
+                .andRespond(withSuccess("""
+                    {"token": "eureca-token-fmt"}
+                    """, MediaType.APPLICATION_JSON));
+
+            mockServer.expect(requestTo(PROFILE_URL))
+                .andRespond(withSuccess("""
+                    {
+                      "id": "clara.estudante",
+                      "name": "Clara Estudante",
+                      "email": "clara@unicar.edu.br",
+                      "type": "Aluno",
+                      "attributes": {"aluno": "2022050"}
+                    }
+                    """, MediaType.APPLICATION_JSON));
+
+            mockServer.expect(requestToUriTemplate(ESTUDANTE_URL + "?estudante={matricula}", "2022050"))
+                .andRespond(withSuccess("""
+                    {
+                      "matricula_do_estudante": "2022050",
+                      "nome_do_curso": "Ciência da Computação",
+                      "sexo": "F",
+                      "cpf": "111.222.333-44"
+                    }
+                    """, MediaType.APPLICATION_JSON));
+
+            given(usuarioRepository.findByCpf("11122233344")).willReturn(Optional.empty());
+            given(usuarioRepository.findByMatricula("2022050")).willReturn(Optional.empty());
+            given(usuarioRepository.findByEmail("clara@unicar.edu.br")).willReturn(Optional.empty());
+            given(usuarioRepository.save(any(Usuario.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+            given(jwtService.gerarToken(any(Usuario.class))).willReturn("jwt-clara");
+
+            authService.login(requestValido());
+
+            org.mockito.ArgumentCaptor<Usuario> captor = org.mockito.ArgumentCaptor.forClass(Usuario.class);
+            verify(usuarioRepository).save(captor.capture());
+            assertThat(captor.getValue().getCpf()).isEqualTo("11122233344");
+        }
+
+        @Test
+        void deveLancarBadGatewayQuandoCpfRetornadoForInvalido() {
+            mockServer.expect(requestTo(TOKEN_URL))
+                .andRespond(withSuccess("""
+                    {"token": "eureca-token-invalido"}
+                    """, MediaType.APPLICATION_JSON));
+
+            mockServer.expect(requestTo(PROFILE_URL))
+                .andRespond(withSuccess("""
+                    {
+                      "id": "invalido@unicar.edu.br",
+                      "name": "Cpf Invalido",
+                      "email": "invalido@unicar.edu.br",
+                      "type": "Aluno",
+                      "attributes": {"aluno": "2023001"}
+                    }
+                    """, MediaType.APPLICATION_JSON));
+
+            mockServer.expect(requestToUriTemplate(ESTUDANTE_URL + "?estudante={matricula}", "2023001"))
+                .andRespond(withSuccess("""
+                    {
+                      "matricula_do_estudante": "2023001",
+                      "nome_do_curso": "Ciência da Computação",
+                      "sexo": "F",
+                      "cpf": "123456"
+                    }
+                    """, MediaType.APPLICATION_JSON));
+
+            given(usuarioRepository.findByCpf("123456")).willReturn(Optional.empty());
+            given(usuarioRepository.findByMatricula("2023001")).willReturn(Optional.empty());
+            given(usuarioRepository.findByEmail("invalido@unicar.edu.br")).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> authService.login(requestValido()))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.BAD_GATEWAY);
+
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        void deveAutenticarComSucessoQuandoIdDoPerfilForNomeDoUsuario() {
+            mockServer.expect(requestTo(TOKEN_URL))
+                .andRespond(withSuccess("""
+                    {"token": "eureca-token-nome"}
+                    """, MediaType.APPLICATION_JSON));
+
+            mockServer.expect(requestTo(PROFILE_URL))
+                .andRespond(withSuccess("""
+                    {
+                      "id": "Clara Estudante Completo",
+                      "name": "Clara Estudante Completo",
+                      "email": "clara.nome@unicar.edu.br",
+                      "type": "Aluno",
+                      "attributes": {"aluno": "2024001"}
+                    }
+                    """, MediaType.APPLICATION_JSON));
+
+            mockServer.expect(requestToUriTemplate(ESTUDANTE_URL + "?estudante={matricula}", "2024001"))
+                .andRespond(withSuccess("""
+                    {
+                      "matricula_do_estudante": "2024001",
+                      "nome_do_curso": "Ciência da Computação",
+                      "sexo": "F",
+                      "cpf": "22233344455"
+                    }
+                    """, MediaType.APPLICATION_JSON));
+
+            given(usuarioRepository.findByCpf("22233344455")).willReturn(Optional.empty());
+            given(usuarioRepository.findByMatricula("2024001")).willReturn(Optional.empty());
+            given(usuarioRepository.findByEmail("clara.nome@unicar.edu.br")).willReturn(Optional.empty());
+            given(usuarioRepository.save(any(Usuario.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+            given(jwtService.gerarToken(any(Usuario.class))).willReturn("jwt-nome");
+
+            LoginResponseDTO response = authService.login(requestValido());
+
+            assertThat(response.token()).isEqualTo("jwt-nome");
+
+            org.mockito.ArgumentCaptor<Usuario> captor = org.mockito.ArgumentCaptor.forClass(Usuario.class);
+            verify(usuarioRepository).save(captor.capture());
+            assertThat(captor.getValue().getCpf()).isEqualTo("22233344455");
+        }
+
+        @Test
+        void deveAutenticarComSucessoQuandoIdDoPerfilForEmailDoUsuario() {
+            mockServer.expect(requestTo(TOKEN_URL))
+                .andRespond(withSuccess("""
+                    {"token": "eureca-token-email"}
+                    """, MediaType.APPLICATION_JSON));
+
+            mockServer.expect(requestTo(PROFILE_URL))
+                .andRespond(withSuccess("""
+                    {
+                      "id": "clara.email@unicar.edu.br",
+                      "name": "Clara Estudante Email",
+                      "email": "clara.email@unicar.edu.br",
+                      "type": "Aluno",
+                      "attributes": {"aluno": "2024002"}
+                    }
+                    """, MediaType.APPLICATION_JSON));
+
+            mockServer.expect(requestToUriTemplate(ESTUDANTE_URL + "?estudante={matricula}", "2024002"))
+                .andRespond(withSuccess("""
+                    {
+                      "matricula_do_estudante": "2024002",
+                      "nome_do_curso": "Ciência da Computação",
+                      "sexo": "F",
+                      "cpf": "33344455566"
+                    }
+                    """, MediaType.APPLICATION_JSON));
+
+            given(usuarioRepository.findByCpf("33344455566")).willReturn(Optional.empty());
+            given(usuarioRepository.findByMatricula("2024002")).willReturn(Optional.empty());
+            given(usuarioRepository.findByEmail("clara.email@unicar.edu.br")).willReturn(Optional.empty());
+            given(usuarioRepository.save(any(Usuario.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+            given(jwtService.gerarToken(any(Usuario.class))).willReturn("jwt-email");
+
+            LoginResponseDTO response = authService.login(requestValido());
+
+            assertThat(response.token()).isEqualTo("jwt-email");
+
+            org.mockito.ArgumentCaptor<Usuario> captor = org.mockito.ArgumentCaptor.forClass(Usuario.class);
+            verify(usuarioRepository).save(captor.capture());
+            assertThat(captor.getValue().getCpf()).isEqualTo("33344455566");
+        }
+
         @Test
         void deveLancarBadGatewayQuandoNaoHaAtributosDeAlunoNemDocente() {
             mockServer.expect(requestTo(TOKEN_URL))

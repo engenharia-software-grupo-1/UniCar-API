@@ -150,12 +150,12 @@ public class AuthService {
         }
     }
 
-    private record DadosAdicionais(String matricula, String curso, Genero genero) {}
+    private record DadosAdicionais(String cpf, String matricula, String curso, Genero genero) {}
 
     private Usuario criarOuSincronizarUsuario(String eurecaToken, EurecaProfileResponseDTO perfil) {
         DadosAdicionais dados = obterDadosAdicionais(eurecaToken, perfil);
         Optional<Usuario> existente = buscarUsuarioExistente(perfil, dados);
-
+    
         Usuario usuario = existente
             .map(u -> sincronizar(u, perfil, dados))
             .orElseGet(() -> criarUsuario(perfil, dados));
@@ -166,8 +166,9 @@ public class AuthService {
     private Optional<Usuario> buscarUsuarioExistente(EurecaProfileResponseDTO perfil, DadosAdicionais dados) {
         Optional<Usuario> existente = Optional.empty();
 
-        if (temTexto(perfil.id())) {
-            existente = usuarioRepository.findByCpf(perfil.id());
+        String cpf = sanitizarCpf(dados.cpf());
+        if (temTexto(cpf)) {
+            existente = usuarioRepository.findByCpf(cpf);
         }
         if (existente.isEmpty() && temTexto(dados.matricula())) {
             existente = usuarioRepository.findByMatricula(dados.matricula());
@@ -190,7 +191,7 @@ public class AuthService {
             return dadosDocente;
         }
 
-        log.warn("Não foi possível obter matrícula de estudante ou docente no Eureca para o CPF {}", mascararCpf(perfil.id()));
+        log.warn("Não foi possível obter matrícula de estudante ou docente no Eureca para o e-mail {}", perfil.email());
         throw new ResponseStatusException(
             HttpStatus.BAD_GATEWAY,
             "Não foi possível obter os dados acadêmicos do usuário no Eureca."
@@ -217,7 +218,7 @@ public class AuthService {
                 ? estudante.matriculaDoEstudante()
                 : matricula;
 
-            return new DadosAdicionais(matriculaResolvida, estudante.nomeDoCurso(), mapearGenero(estudante.sexo()));
+            return new DadosAdicionais(estudante.cpf(), matriculaResolvida, estudante.nomeDoCurso(), mapearGenero(estudante.sexo()));
         } catch (Exception ex) {
             log.warn("Falha ao consultar dados de estudante no Eureca (matrícula {}), tentando fallback de docente", matricula, ex);
             return null;
@@ -240,7 +241,7 @@ public class AuthService {
                 ? String.valueOf(professor.matriculaDoDocente())
                 : siape;
 
-            return new DadosAdicionais(matricula, null, Genero.NAO_INFORMADO);
+            return new DadosAdicionais(professor.cpf(), matricula, null, Genero.NAO_INFORMADO);
         } catch (Exception ex) {
             log.warn("Falha ao consultar dados de docente no Eureca (siape {})", siape, ex);
             return null;
@@ -328,7 +329,7 @@ public class AuthService {
 
     private Usuario criarUsuario(EurecaProfileResponseDTO perfil, DadosAdicionais dados) {
         return Usuario.builder()
-            .cpf(perfil.id())
+            .cpf(validarCpf(dados.cpf()))
             .nome(perfil.name())
             .email(perfil.email())
             .matricula(dados.matricula())
@@ -340,8 +341,8 @@ public class AuthService {
     }
 
     private Usuario sincronizar(Usuario usuario, EurecaProfileResponseDTO perfil, DadosAdicionais dados) {
-        if (temTexto(perfil.id())) {
-            usuario.setCpf(perfil.id());
+        if (temTexto(dados.cpf())) {
+            usuario.setCpf(validarCpf(dados.cpf()));
         }
         if (temTexto(perfil.name())) {
             usuario.setNome(perfil.name());
@@ -364,6 +365,23 @@ public class AuthService {
 
     private static boolean temTexto(String valor) {
         return valor != null && !valor.isBlank();
+    }
+
+    private static final int TAMANHO_CPF = 11;
+
+    private static String sanitizarCpf(String cpf) {
+        return cpf == null ? null : cpf.replaceAll("\\D", "");
+    }
+
+    private static String validarCpf(String cpfBruto) {
+        String cpf = sanitizarCpf(cpfBruto);
+        if (cpf == null || cpf.length() != TAMANHO_CPF) {
+            throw new ResponseStatusException(
+                HttpStatus.BAD_GATEWAY,
+                "O CPF retornado pelo Eureca é inválido."
+            );
+        }
+        return cpf;
     }
 
     private static String mascararCpf(String cpf) {
