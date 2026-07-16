@@ -1,12 +1,8 @@
 package com.unicar.controller.carona;
 
-import com.unicar.dto.carona.CaronaDetalheResponseDTO;
-import com.unicar.dto.carona.CaronaListItemResponseDTO;
-import com.unicar.dto.carona.CaronaObservacaoRequestDTO;
-import com.unicar.dto.carona.CaronaRequestDTO;
-import com.unicar.dto.carona.CaronaResponseDTO;
-import com.unicar.dto.carona.PassageiroResponseDTO;
+import com.unicar.dto.carona.*;
 import com.unicar.security.UsuarioDetails;
+import com.unicar.service.carona.BuscaCaronaService;
 import com.unicar.service.carona.CaronaService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,6 +26,7 @@ import java.util.List;
 public class CaronaController {
 
     private final CaronaService caronaService;
+    private final BuscaCaronaService buscaCaronaService;
 
     @PostMapping
     @Operation(summary = "Cria uma nova carona")
@@ -114,5 +111,15 @@ public class CaronaController {
 
         caronaService.finalizarCarona(id,usuario.getUsuario().getId());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping
+    public ResponseEntity<List<CaronaBuscaResponseDTO>> buscarCaronasDisponiveis(
+            BuscaCaronaFiltroDTO filtros,
+            @AuthenticationPrincipal UsuarioDetails usuario) {
+
+        List<CaronaBuscaResponseDTO> caronas =
+                buscaCaronaService.buscarCaronasDisponiveis(filtros, usuario.getUsuario().getId());
+        return ResponseEntity.ok(caronas);
     }
 }

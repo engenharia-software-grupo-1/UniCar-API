@@ -1776,6 +1776,14 @@ paths:
         Respeita bloqueios. Permite filtros por coordenadas de origem/destino,
         gênero e curso do motorista (RN-BUS-01 a RN-BUS-06).
       parameters:
+        - name: dataHoraSaida
+          in: query
+          required: false
+          description: Filtra as caronas que acontecem exatamente nesta data e horário (Ano-Mês-DiaTHora:Minuto:Segundo)
+          schema:
+            type: string
+            format: date-time
+          example: "2026-06-25T07:00:00"
         - name: origemLatitude
           in: query
           schema:

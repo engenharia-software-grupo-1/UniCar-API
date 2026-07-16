@@ -11,16 +11,20 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface CaronaRepository extends JpaRepository<Carona, Long> {
+public interface CaronaRepository extends JpaRepository<Carona, Long>, JpaSpecificationExecutor<Carona> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from Carona c where c.id = :id")
     Optional<Carona> findByIdForUpdate(@Param("id") Long id);
+
     boolean existsByMotorista_IdAndStatus(Long motoristaId, StatusCarona status);
+
     List<Carona> findByMotorista_Id(Long motoristaId);
+
     @Query(value = """
             SELECT
                 c.*,
