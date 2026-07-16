@@ -3,6 +3,10 @@ package com.unicar.util;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
+/**
+ * Utilitário para cálculos geográficos compartilhados entre services
+ * que lidam com localização (CaronaService, BuscaCaronaService).
+ */
 public final class GeoUtils {
 
     private static final double RAIO_TERRA_KM = 6371;
@@ -11,7 +15,7 @@ public final class GeoUtils {
     }
 
     /**
-     * Calcula a distância em km entre dois pontos usando Haversine.
+     * Calcula a distância em km entre dois pontos geográficos usando a fórmula de Haversine.
      */
     public static BigDecimal calcularDistanciaKm(BigDecimal lat1, BigDecimal lon1, BigDecimal lat2, BigDecimal lon2) {
         double lat1Rad = Math.toRadians(lat1.doubleValue());

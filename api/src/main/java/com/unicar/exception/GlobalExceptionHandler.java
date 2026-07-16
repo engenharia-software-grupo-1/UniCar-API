@@ -34,7 +34,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({
             RegraDeNegocioException.class,
-            EstadoInvalidoException.class
+            EstadoInvalidoException.class,
+            UsuarioNaoEncontradoException.class
     })
     public ResponseEntity<Map<String, String>> handleBadRequestExceptions(RuntimeException ex) {
         return ResponseEntity

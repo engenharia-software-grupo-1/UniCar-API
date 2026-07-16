@@ -19,6 +19,7 @@ public interface ReservaCaronaRepository extends JpaRepository<ReservaCarona, Lo
     boolean existsByCarona_IdAndUsuario_IdAndStatusIn(Long caronaId, Long usuarioId, List<StatusReserva> statusList);
     List<ReservaCarona> findByUsuario_Id(Long usuarioId);
     List<ReservaCarona> findByCarona_Motorista_Id(Long motoristaId);
+    boolean existsByCaronaIdAndUsuarioId(Long caronaId, Long usuarioId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from ReservaCarona r where r.id = :id")
