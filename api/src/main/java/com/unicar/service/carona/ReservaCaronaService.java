@@ -10,6 +10,7 @@ import com.unicar.dto.carona.ReservaRecebidaResponseDTO;
 import com.unicar.dto.carona.ReservaRequestDTO;
 import com.unicar.dto.carona.ReservaResponseDTO;
 import com.unicar.dto.carona.ReservaSimulacaoResponseDTO;
+import com.unicar.dto.carona.ReservaStatusResponseDTO;
 import com.unicar.enums.StatusCarona;
 import com.unicar.enums.StatusReserva;
 import com.unicar.exception.AcessoNegadoException;
@@ -29,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -120,6 +122,75 @@ public class ReservaCaronaService {
     }
 
     @Transactional
+    public ReservaStatusResponseDTO aceitar(Long reservaId, Long motoristaId) {
+        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
+        validarMotorista(reserva, motoristaId);
+
+        if (reserva.getStatus() != StatusReserva.PENDENTE) {
+            throw new EstadoInvalidoException("Apenas reservas PENDENTES podem ser aceitas");
+        }
+
+        Carona carona = buscarCaronaParaAtualizacao(reserva.getCarona().getId());
+        int vagasOcupadas = repository.countByCarona_IdAndStatus(carona.getId(), StatusReserva.ACEITA);
+        int vagasDisponiveis = carona.getVagasTotais() - vagasOcupadas;
+        if (reserva.getQuantidadePassageiros() > vagasDisponiveis) {
+            throw new RegraDeNegocioException("Quantidade de vagas indisponível");
+        }
+
+        reserva.setStatus(StatusReserva.ACEITA);
+        reserva.setDataResposta(LocalDateTime.now());
+        reserva = repository.save(reserva);
+
+        return new ReservaStatusResponseDTO(reserva);
+    }
+
+    @Transactional
+    public ReservaStatusResponseDTO recusar(Long reservaId, Long motoristaId) {
+        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
+        validarMotorista(reserva, motoristaId);
+
+        if (reserva.getStatus() != StatusReserva.PENDENTE) {
+            throw new EstadoInvalidoException("Apenas reservas PENDENTES podem ser recusadas");
+        }
+
+        reserva.setStatus(StatusReserva.RECUSADA);
+        reserva.setDataResposta(LocalDateTime.now());
+        reserva = repository.save(reserva);
+
+        return new ReservaStatusResponseDTO(reserva);
+    }
+
+    @Transactional
+    public ReservaStatusResponseDTO cancelar(Long reservaId, Long usuarioId) {
+        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
+
+        boolean isPassageiro = reserva.getUsuario().getId().equals(usuarioId);
+        boolean isMotorista = reserva.getCarona().getMotorista().getId().equals(usuarioId);
+        if (!isPassageiro && !isMotorista) {
+            throw new AcessoNegadoException("Usuário não tem permissão para cancelar esta reserva");
+        }
+
+        StatusReserva status = reserva.getStatus();
+        if (status == StatusReserva.CONCLUIDA) {
+            throw new EstadoInvalidoException("Não é possível cancelar uma reserva finalizada");
+        }
+
+        boolean podeCancelar = isPassageiro
+                ? (status == StatusReserva.PENDENTE || status == StatusReserva.ACEITA)
+                : status == StatusReserva.ACEITA;
+
+        if (!podeCancelar) {
+            throw new EstadoInvalidoException("Não é possível cancelar uma reserva com status " + status);
+        }
+
+        reserva.setStatus(StatusReserva.CANCELADA);
+        reserva.setDataResposta(LocalDateTime.now());
+        reserva = repository.save(reserva);
+
+        return new ReservaStatusResponseDTO(reserva);
+    }
+
+    @Transactional
     public void removerReserva(Long reservaId, Long usuarioId) {
         ReservaCarona reserva = buscarReserva(reservaId);
         validarDono(reserva, usuarioId);
@@ -134,6 +205,17 @@ public class ReservaCaronaService {
 
     public ReservaCarona buscarReserva(Long reservaId) {
         return repository.findById(reservaId).orElseThrow(() -> new ReservaNaoEncontradaException("Reserva não encontrada: id=" + reservaId));
+    }
+
+    private ReservaCarona buscarReservaParaAtualizacao(Long reservaId) {
+        return repository.findByIdForUpdate(reservaId)
+                .orElseThrow(() -> new ReservaNaoEncontradaException("Reserva não encontrada: id=" + reservaId));
+    }
+
+    private void validarMotorista(ReservaCarona reserva, Long motoristaId) {
+        if (!reserva.getCarona().getMotorista().getId().equals(motoristaId)) {
+            throw new AcessoNegadoException("Usuário não é o motorista desta carona");
+        }
     }
 
     private void validarDono(ReservaCarona reserva, Long usuarioId) {
