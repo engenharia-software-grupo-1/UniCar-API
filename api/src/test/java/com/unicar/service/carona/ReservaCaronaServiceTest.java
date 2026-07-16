@@ -51,12 +51,12 @@ class ReservaCaronaServiceTest {
     }
 
     @Nested
-    @DisplayName("Cancelar reserva")
-    class CancelarReserva {
+    @DisplayName("Remover reserva")
+    class RemoverReserva {
 
         @Test
-        @DisplayName("Deve cancelar reserva pendente")
-        void deveCancelarReservaPendente() {
+        @DisplayName("Deve remover reserva pendente")
+        void deveRemoverReservaPendente() {
 
 
             reserva.setStatus(StatusReserva.PENDENTE);
@@ -66,7 +66,7 @@ class ReservaCaronaServiceTest {
                     .thenReturn(Optional.of(reserva));
 
 
-            service.cancelarReserva(
+            service.removerReserva(
                     reservaId,
                     usuarioId
             );
@@ -83,8 +83,8 @@ class ReservaCaronaServiceTest {
         }
 
         @Test
-        @DisplayName("Deve cancelar reserva aceita")
-        void deveCancelarReservaAceita() {
+        @DisplayName("Deve remover reserva aceita")
+        void deveRemoverReservaAceita() {
 
 
             reserva.setStatus(StatusReserva.ACEITA);
@@ -94,7 +94,7 @@ class ReservaCaronaServiceTest {
                     .thenReturn(Optional.of(reserva));
 
 
-            service.cancelarReserva(
+            service.removerReserva(
                     reservaId,
                     usuarioId
             );
@@ -111,8 +111,8 @@ class ReservaCaronaServiceTest {
         }
 
         @Test
-        @DisplayName("Não deve cancelar reserva com status inválido")
-        void naoDeveCancelarReservaComStatusInvalido() {
+        @DisplayName("Não deve remover reserva com status inválido")
+        void naoDeveRemoverReservaComStatusInvalido() {
 
 
             reserva.setStatus(StatusReserva.CANCELADA);
@@ -124,7 +124,7 @@ class ReservaCaronaServiceTest {
             assertThrows(
                     EstadoInvalidoException.class,
                     () ->
-                            service.cancelarReserva(
+                            service.removerReserva(
                                     reservaId,
                                     usuarioId
                             )
@@ -136,8 +136,8 @@ class ReservaCaronaServiceTest {
         }
 
         @Test
-        @DisplayName("Não deve cancelar reserva de outro usuário")
-        void naoDeveCancelarReservaDeOutroUsuario() {
+        @DisplayName("Não deve remover reserva de outro usuário")
+        void naoDeveRemoverReservaDeOutroUsuario() {
 
 
             reserva.setStatus(StatusReserva.PENDENTE);
@@ -150,7 +150,7 @@ class ReservaCaronaServiceTest {
             assertThrows(
                     AcessoNegadoException.class,
                     () ->
-                            service.cancelarReserva(
+                            service.removerReserva(
                                     reservaId,
                                     outroUsuarioId
                             )

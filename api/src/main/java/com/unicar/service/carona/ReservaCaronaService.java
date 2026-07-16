@@ -17,12 +17,12 @@ public class ReservaCaronaService {
     private final ReservaCaronaRepository repository;
 
     @Transactional
-    public void cancelarReserva(Long reservaId, Long usuarioId) {
+    public void removerReserva(Long reservaId, Long usuarioId) {
         ReservaCarona reserva = buscarReserva(reservaId);
         validarDono(reserva, usuarioId);
 
         if (reserva.getStatus() != StatusReserva.PENDENTE && reserva.getStatus() != StatusReserva.ACEITA) {
-            throw new EstadoInvalidoException("Não é possível cancelar uma reserva com status " + reserva.getStatus());
+            throw new EstadoInvalidoException("Não é possível remover uma reserva com status " + reserva.getStatus());
         }
 
         reserva.setStatus(StatusReserva.CANCELADA);
