@@ -164,6 +164,11 @@ public class CaronaService {
         Carona carona = buscarCaronaParaAtualizacao(id);
         validarMotorista(carona, motoristaId);
 
+        if (request.datasHorasSaida() == null || request.datasHorasSaida().size() != 1) {
+            throw new RegraDeNegocioException(
+                "A atualização de carona aceita exatamente uma data/hora de saída");
+        }
+
         LocalDateTime novaDataHora = request.datasHorasSaida().getFirst();
 
         if (carona.getStatus() != StatusCarona.CRIADA) {
