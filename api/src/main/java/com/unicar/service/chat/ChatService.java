@@ -21,10 +21,32 @@ public class ChatService {
     @Transactional(readOnly = true)
     public List<ChatDTO> listarChatsDoUsuario(Long usuarioAutenticadoId) {
         List<Chat> chats = chatRepository.findChatsByUsuarioId(usuarioAutenticadoId);
+
         return chats.stream()
-                .map(chat -> ChatDTO.from(chat, usuarioAutenticadoId))
+                .map(chat -> {
+                    Long passageiroId = chat.getReserva().getUsuario().getId();
+                    // Define o nome do outro participante do chat
+                    String nomeParticipante = usuarioAutenticadoId.equals(passageiroId)
+                            ? chat.getReserva().getCarona().getMotorista().getNome()
+                            : chat.getReserva().getUsuario().getNome();
+
+                    // Por enquanto, passamos valores padrão para o topo do fluxo (ou você pode injetar o MensagemRepository para buscá-los)
+                    String ultimaMensagem = "Clique para abrir a conversa";
+                    java.time.LocalDateTime dataUltimaMensagem = chat.getDataCriacao();
+                    Integer mensagensNaoLidas = 0;
+
+                    return new ChatDTO(
+                            chat.getId(),
+                            chat.getReserva().getId(),
+                            nomeParticipante,
+                            ultimaMensagem,
+                            dataUltimaMensagem,
+                            mensagensNaoLidas
+                    );
+                })
                 .toList();
     }
+
 
     @Transactional
     public ChatDTO criarChatParaReserva(ReservaCarona reserva) {
@@ -36,7 +58,16 @@ public class ChatService {
                 .reserva(reserva)
                 .build();
 
-        return ChatDTO.from(chatRepository.save(chat), reserva.getUsuario().getId());
+        Chat chatSalvo = chatRepository.save(chat);
+
+        return new ChatDTO(
+                chatSalvo.getId(),
+                reserva.getId(),
+                reserva.getCarona().getMotorista().getNome(),
+                "Chat inicializado",
+                chatSalvo.getDataCriacao(),
+                0
+        );
     }
 
     public Chat buscarEValidarAcessoAoChat(Long chatId, Long usuarioId) {

@@ -5,9 +5,10 @@ import com.unicar.domain.chat.Chat;
 import com.unicar.domain.chat.Mensagem;
 import com.unicar.dto.chat.EnviarMensagemRequestDTO;
 import com.unicar.dto.chat.MensagemDTO;
-import com.unicar.enums.StatusCarona;
 import com.unicar.repository.UsuarioRepository;
 import com.unicar.repository.chat.MensagemRepository;
+import com.unicar.enums.StatusCarona;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,9 +28,10 @@ public class MensagemService {
     @Transactional(readOnly = true)
     public List<MensagemDTO> listarMensagensDoChat(Long chatId, Long usuarioAutenticadoId) {
         chatService.buscarEValidarAcessoAoChat(chatId, usuarioAutenticadoId);
+
         List<Mensagem> mensagens = mensagemRepository.findByChatIdOrderByDataEnvioAsc(chatId);
         return mensagens.stream()
-                .map(msg -> MensagemDTO.from(msg, usuarioAutenticadoId))
+                .map(MensagemDTO::from)
                 .toList();
     }
 
@@ -37,13 +39,12 @@ public class MensagemService {
     public MensagemDTO enviarMensagem(Long chatId, Long usuarioAutenticadoId, EnviarMensagemRequestDTO request) {
         Chat chat = chatService.buscarEValidarAcessoAoChat(chatId, usuarioAutenticadoId);
 
-        // CORREÇÃO: Utiliza o enum StatusCarona original do projeto
+
         StatusCarona statusCarona = chat.getReserva().getCarona().getStatus();
 
         if (statusCarona == StatusCarona.CANCELADA) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é possível enviar mensagens em caronas canceladas");
         }
-
         if (statusCarona == StatusCarona.FINALIZADA) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é possível enviar mensagens após o encerramento da carona");
         }
@@ -57,7 +58,7 @@ public class MensagemService {
                 .conteudo(request.conteudo())
                 .build();
 
-        return MensagemDTO.from(mensagemRepository.save(mensagem), usuarioAutenticadoId);
+        return MensagemDTO.from(mensagemRepository.save(mensagem));
     }
 
     @Transactional

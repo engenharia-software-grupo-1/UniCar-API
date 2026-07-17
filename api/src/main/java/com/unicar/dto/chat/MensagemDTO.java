@@ -4,19 +4,19 @@ import com.unicar.domain.chat.Mensagem;
 import java.time.LocalDateTime;
 
 public record MensagemDTO(
+        Long id,
+        Long remetenteId,
         String conteudo,
         Boolean lida,
-        LocalDateTime dataEnvio,
-        String nomeRemetente,
-        Boolean pertencenteAoUsuarioLogado
+        LocalDateTime dataEnvio
 ) {
-    public static MensagemDTO from(Mensagem mensagem, Long usuarioAutenticadoId) {
+    public static MensagemDTO from(Mensagem mensagem) {
         return new MensagemDTO(
+                mensagem.getId(),
+                mensagem.getRemetente().getId(),
                 mensagem.getConteudo(),
                 mensagem.getLida(),
-                mensagem.getDataEnvio(),
-                mensagem.getRemetente().getNome(),
-                mensagem.getRemetente().getId().equals(usuarioAutenticadoId)
+                mensagem.getDataEnvio()
         );
     }
 }
