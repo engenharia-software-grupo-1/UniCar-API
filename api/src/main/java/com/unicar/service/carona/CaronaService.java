@@ -7,22 +7,17 @@ import com.unicar.domain.Veiculo;
 import com.unicar.dto.carona.*;
 import com.unicar.enums.StatusCarona;
 import com.unicar.enums.StatusReserva;
-import com.unicar.exception.AcessoNegadoException;
-import com.unicar.exception.CaronaNaoEncontradaException;
-import com.unicar.exception.EstadoInvalidoException;
-import com.unicar.exception.RegraDeNegocioException;
-import com.unicar.exception.VeiculoNaoEncontradoException;
+import com.unicar.exception.*;
 import com.unicar.repository.CaronaRepository;
 import com.unicar.repository.ReservaCaronaRepository;
 import com.unicar.repository.UsuarioRepository;
 import com.unicar.repository.VeiculoRepository;
+import com.unicar.service.NotificacaoService;
 import com.unicar.util.GeoUtils;
-
 import lombok.RequiredArgsConstructor;
-
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.beans.factory.annotation.Value;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -44,6 +39,7 @@ public class CaronaService {
     private final UsuarioRepository usuarioRepository;
     private final VeiculoRepository veiculoRepository;
     private final ReservaCaronaRepository reservaCaronaRepository;
+    private final NotificacaoService notificacaoService;
 
     @Value("${unicar.carona.fator-valor-por-km:1.00}")
     private BigDecimal fatorValorPorKm;
@@ -218,10 +214,18 @@ public class CaronaService {
 
         List<ReservaCarona> reservas = reservaCaronaRepository.findByCaronaIdAndStatusIn(id, RESERVAS_ATIVAS);
         LocalDateTime agora = LocalDateTime.now();
+
         reservas.forEach(reserva -> {
             reserva.setStatus(StatusReserva.CANCELADA);
             reserva.setDataResposta(agora);
+
+            notificacaoService.dispararNotificacaoSistemica(
+                    reserva.getUsuario(),
+                    "Carona Cancelada ⚠️",
+                    "A carona oferecida por " + carona.getMotorista().getNome() + " com destino a " + carona.getDestinoDescricao() + " foi cancelada."
+            );
         });
+
         reservaCaronaRepository.saveAll(reservas);
         return new CaronaResponseDTO(carona.getId(), carona.getStatus());
     }
@@ -272,8 +276,32 @@ public class CaronaService {
         caronaRepository.save(carona);
 
         List<ReservaCarona> reservas = reservaCaronaRepository.findByCaronaIdAndStatus(caronaId, StatusReserva.ACEITA);
-        reservas.forEach(r -> r.setStatus(StatusReserva.CONCLUIDA));
+
+        reservas.forEach(r -> {
+            r.setStatus(StatusReserva.CONCLUIDA);
+
+            notificacaoService.dispararNotificacaoSistemica(
+                    r.getUsuario(),
+                    "Carona Finalizada 🏁",
+                    "Você chegou ao destino de sua carona para " + carona.getDestinoDescricao() + "."
+            );
+
+            notificacaoService.dispararNotificacaoSistemica(
+                    r.getUsuario(),
+                    "Avalie sua Viagem ⭐",
+                    "Que tal avaliar sua experiência na carona com o motorista " + carona.getMotorista().getNome() + "?"
+            );
+        });
+
         reservaCaronaRepository.saveAll(reservas);
+
+        if (!reservas.isEmpty()) {
+            notificacaoService.dispararNotificacaoSistemica(
+                    carona.getMotorista(),
+                    "Avalie seus Passageiros ⭐",
+                    "Sua carona foi finalizada com sucesso. Deixe sua avaliação para seus passageiros."
+            );
+        }
     }
 
     private Carona buscarCaronaParaAtualizacao(Long id) {
