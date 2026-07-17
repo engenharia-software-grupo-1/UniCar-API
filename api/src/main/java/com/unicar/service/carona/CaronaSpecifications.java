@@ -2,8 +2,11 @@ package com.unicar.service.carona;
 
 import com.unicar.domain.BloqueioUsuario;
 import com.unicar.domain.Carona;
+import com.unicar.domain.ReservaCarona;
 import com.unicar.domain.Usuario;
 import com.unicar.enums.StatusCarona;
+import com.unicar.enums.StatusReserva;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
@@ -70,9 +73,18 @@ public class CaronaSpecifications {
     }
 
     public static Specification<Carona> comVagasDisponiveis() {
-        // Ainda não há controle de reservas: vagas disponíveis = vagasTotais.
-        // Quando a entidade Reserva existir, trocar por vagasTotais - count(reservas ACEITAS) > 0.
-        return (root, query, cb) -> cb.greaterThan(root.get("vagasTotais"), 0);
+        return (root, query, cb) -> {
+            Subquery<Integer> subquery = query.subquery(Integer.class);
+            Root<ReservaCarona> reserva = subquery.from(ReservaCarona.class);
+            subquery.select(cb.sum(reserva.get("quantidadePassageiros")));
+            subquery.where(
+                    cb.equal(reserva.get("carona"), root),
+                    cb.equal(reserva.get("status"), StatusReserva.ACEITA)
+            );
+
+            Expression<Integer> vagasOcupadas = cb.coalesce(subquery, 0);
+            return cb.greaterThan(cb.diff(root.get("vagasTotais"), vagasOcupadas), 0);
+        };
     }
 
     public static Specification<Carona> comDataHoraSaida(LocalDateTime dataHoraSaida) {
