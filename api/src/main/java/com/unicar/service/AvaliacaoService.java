@@ -136,6 +136,10 @@ public class AvaliacaoService {
             throw new RegraDeNegocioException(
                     "O usuário não pode avaliar a si mesmo.");
         }
+        if (avaliadorEhPassageiro && avaliadoEhPassageiro) {
+            throw new RegraDeNegocioException(
+                "Passageiros não podem se avaliar entre si.");
+        }
     }
 
     private void validarNaoAvaliouAntes(Long caronaId,
