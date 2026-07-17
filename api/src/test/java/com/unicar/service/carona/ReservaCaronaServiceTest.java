@@ -36,6 +36,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -105,6 +106,7 @@ class ReservaCaronaServiceTest {
         carona.setOrigemLatitude(ORIGEM_LAT);
         carona.setOrigemLongitude(ORIGEM_LON);
         carona.setDestinoDescricao("UFCG");
+        carona.setDataHoraPartida(LocalDateTime.now().plusDays(1));
         carona.setDestinoLatitude(DESTINO_LAT);
         carona.setDestinoLongitude(DESTINO_LON);
     }
