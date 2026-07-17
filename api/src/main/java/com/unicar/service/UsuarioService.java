@@ -1,9 +1,9 @@
 package com.unicar.service;
 
 import com.unicar.domain.Usuario;
+import com.unicar.dto.usuario.PerfilUsuarioDTO;
 import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
 import com.unicar.dto.usuario.UsuarioDTO;
-import com.unicar.dto.usuario.UsuarioPublicoDTO;
 import com.unicar.repository.UsuarioRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -17,13 +17,26 @@ import org.springframework.web.server.ResponseStatusException;
 public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final AvaliacaoService avaliacaoService;
 
     public UsuarioDTO buscarPerfil(Long usuarioId) {
         return UsuarioDTO.from(buscarUsuarioAtivo(usuarioId));
     }
 
-    public UsuarioPublicoDTO buscarUsuario(String matricula) {
-        return UsuarioPublicoDTO.from(buscarUsuarioAtivo(matricula));
+    public PerfilUsuarioDTO perfilPublico(Long id) {
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
+
+        var reputacao = avaliacaoService.buscarReputacao(id);
+
+        return new PerfilUsuarioDTO(
+                usuario.getId(),
+                usuario.getNome(),
+                usuario.getCurso(),
+                usuario.getGenero().name(),
+                reputacao.media(),
+                reputacao.quantidadeAvaliacoes().intValue()
+        );
     }
 
     @Transactional
@@ -78,4 +91,5 @@ public class UsuarioService {
             );
         }
     }
+
 }

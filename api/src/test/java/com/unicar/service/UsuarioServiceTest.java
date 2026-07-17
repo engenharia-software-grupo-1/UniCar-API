@@ -1,9 +1,10 @@
 package com.unicar.service;
 
 import com.unicar.domain.Usuario;
+import com.unicar.dto.avaliacao.ReputacaoDTO;
+import com.unicar.dto.usuario.PerfilUsuarioDTO;
 import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
 import com.unicar.dto.usuario.UsuarioDTO;
-import com.unicar.dto.usuario.UsuarioPublicoDTO;
 import com.unicar.enums.Genero;
 import com.unicar.repository.UsuarioRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +38,9 @@ class UsuarioServiceTest {
 
     @InjectMocks
     private UsuarioService usuarioService;
+
+    @Mock
+    private AvaliacaoService avaliacaoService;
 
     private Usuario usuario;
 
@@ -113,58 +117,6 @@ class UsuarioServiceTest {
                 });
 
             verify(usuarioRepository, never()).save(any());
-        }
-    }
-
-    @Nested
-    @DisplayName("buscarUsuario")
-    class BuscarUsuario {
-
-        @Test
-        @DisplayName("deve retornar o usuário público quando existe e está ativo")
-        void deveBuscarUsuarioPublico() {
-            when(usuarioRepository.findByMatricula("20230001")).thenReturn(Optional.of(usuario));
-
-            UsuarioPublicoDTO dto = usuarioService.buscarUsuario("20230001");
-
-            assertThat(dto).isNotNull();
-            assertThat(dto.id()).isEqualTo(usuario.getId());
-            assertThat(dto.nome()).isEqualTo(usuario.getNome());
-            assertThat(dto.email()).isEqualTo(usuario.getEmail());
-            assertThat(dto.curso()).isEqualTo(usuario.getCurso());
-
-            verify(usuarioRepository).findByMatricula("20230001");
-            verify(usuarioRepository, never()).save(any());
-            verifyNoMoreInteractions(usuarioRepository);
-        }
-
-        @Test
-        @DisplayName("deve lançar 404 quando a matrícula não existe")
-        void deveLancar404AoBuscarUsuarioPublico() {
-            when(usuarioRepository.findByMatricula("20230001")).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> usuarioService.buscarUsuario("20230001"))
-                .isInstanceOf(ResponseStatusException.class)
-                .satisfies(exception -> {
-                    ResponseStatusException ex = (ResponseStatusException) exception;
-                    assertThat(ex.getStatusCode()).isEqualTo(NOT_FOUND);
-                    assertThat(ex.getReason()).isEqualTo("Usuário não encontrado");
-                });
-        }
-
-        @Test
-        @DisplayName("deve lançar 403 quando o usuário está desativado")
-        void deveLancar403QuandoUsuarioDesativadoAoBuscarUsuarioPublico() {
-            usuario.setAtivo(false);
-            when(usuarioRepository.findByMatricula("20230001")).thenReturn(Optional.of(usuario));
-
-            assertThatThrownBy(() -> usuarioService.buscarUsuario("20230001"))
-                .isInstanceOf(ResponseStatusException.class)
-                .satisfies(exception -> {
-                    ResponseStatusException ex = (ResponseStatusException) exception;
-                    assertThat(ex.getStatusCode()).isEqualTo(FORBIDDEN);
-                    assertThat(ex.getReason()).isEqualTo("Usuário desativado");
-                });
         }
     }
 
@@ -336,6 +288,53 @@ class UsuarioServiceTest {
                     assertThat(ex.getReason()).isEqualTo("Usuário desativado");
                 });
 
+            verify(usuarioRepository, never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("perfilPublico")
+    class PerfilPublico {
+
+        @Test
+        @DisplayName("deve retornar o perfil público correto com reputação quando o usuário existe")
+        void deveRetornarPerfilPublico() {
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+
+            ReputacaoDTO reputacaoSimulada =
+                    new ReputacaoDTO(1L, 4.8, 15L);
+            when(avaliacaoService.buscarReputacao(1L)).thenReturn(reputacaoSimulada);
+
+            PerfilUsuarioDTO dto = usuarioService.perfilPublico(1L);
+
+            assertThat(dto).isNotNull();
+            assertThat(dto.id()).isEqualTo(usuario.getId());
+            assertThat(dto.nome()).isEqualTo(usuario.getNome());
+            assertThat(dto.curso()).isEqualTo(usuario.getCurso());
+            assertThat(dto.genero()).isEqualTo(usuario.getGenero().name());
+            assertThat(dto.reputacao()).isEqualTo(4.8);
+            assertThat(dto.quantidadeAvaliacoes()).isEqualTo(15);
+
+            verify(usuarioRepository).findById(1L);
+            verify(avaliacaoService).buscarReputacao(1L);
+            verify(usuarioRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("deve lançar 404 quando o usuário consultado não existe")
+        void deveLancar404AoBuscarPerfilPublicoInexistente() {
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> usuarioService.perfilPublico(1L))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .satisfies(exception -> {
+                        ResponseStatusException ex = (ResponseStatusException) exception;
+                        assertThat(ex.getStatusCode()).isEqualTo(NOT_FOUND);
+                        assertThat(ex.getReason()).isEqualTo("Usuário não encontrado");
+                    });
+
+            verify(usuarioRepository).findById(1L);
+            verify(avaliacaoService, never()).buscarReputacao(any());
             verify(usuarioRepository, never()).save(any());
         }
     }

@@ -1,8 +1,8 @@
 package com.unicar.controller;
 
+import com.unicar.dto.usuario.PerfilUsuarioDTO;
 import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
 import com.unicar.dto.usuario.UsuarioDTO;
-import com.unicar.dto.usuario.UsuarioPublicoDTO;
 import com.unicar.security.UsuarioDetails;
 import com.unicar.service.UsuarioService;
 
@@ -29,14 +29,6 @@ public class UsuarioController {
         return ResponseEntity.ok(usuarioService.buscarPerfil(userDetails.getUsuario().getId()));
     }
 
-    @GetMapping("/{matricula}")
-    @Operation(summary = "Consulta os dados públicos de um usuário")
-    public ResponseEntity<UsuarioPublicoDTO> buscarUsuario(
-            @PathVariable String matricula) {
-
-        return ResponseEntity.ok(usuarioService.buscarUsuario(matricula));
-    }
-
     @PatchMapping("/me")
     @Operation(summary = "Atualiza perfil do usuário autenticado")
     public ResponseEntity<UsuarioDTO> atualizarPerfil(
@@ -51,5 +43,11 @@ public class UsuarioController {
     public ResponseEntity<Void> desativarPerfil(@AuthenticationPrincipal UsuarioDetails userDetails) {
         usuarioService.desativarPerfil(userDetails.getUsuario().getId());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/perfil-publico")
+    @Operation(summary = "Lista perfil público de um usuário")
+    public ResponseEntity<PerfilUsuarioDTO> perfilPublico(@PathVariable Long id, @AuthenticationPrincipal UsuarioDetails usuarioDetails){
+        return ResponseEntity.ok(usuarioService.perfilPublico(id));
     }
 }

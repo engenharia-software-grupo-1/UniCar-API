@@ -1088,28 +1088,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorMessage'
 
-  /usuarios/{matricula}:
-    get:
-      tags: [Usuários]
-      summary: Consulta dados públicos de um usuário
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: matricula
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Dados públicos do usuário
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UsuarioPublico'
-        '404':
-          description: Usuário não encontrado
-
     patch:
       tags: [Usuários]
       summary: Atualizar perfil do usuário autenticado
@@ -1776,6 +1754,14 @@ paths:
         Respeita bloqueios. Permite filtros por coordenadas de origem/destino,
         gênero e curso do motorista (RN-BUS-01 a RN-BUS-06).
       parameters:
+        - name: dataHoraSaida
+          in: query
+          required: false
+          description: Filtra as caronas que acontecem exatamente nesta data e horário (Ano-Mês-DiaTHora:Minuto:Segundo)
+          schema:
+            type: string
+            format: date-time
+          example: "2026-06-25T07:00:00"
         - name: origemLatitude
           in: query
           schema:

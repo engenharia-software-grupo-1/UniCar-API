@@ -1,9 +1,10 @@
 package com.unicar.controller.carona;
 
 import com.unicar.domain.Usuario;
-import com.unicar.dto.carona.PassageiroResponseDTO;
+import com.unicar.dto.carona.*;
 import com.unicar.security.JwtAuthenticationFilter;
 import com.unicar.security.UsuarioDetails;
+import com.unicar.service.carona.BuscaCaronaService;
 import com.unicar.service.carona.CaronaService;
 
 import org.junit.jupiter.api.AfterEach;
@@ -23,6 +24,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -42,6 +45,8 @@ class CaronaControllerTest {
 
     @MockitoBean
     private CaronaService caronaService;
+    @MockitoBean
+    private BuscaCaronaService buscaCaronaService;
 
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -130,6 +135,55 @@ class CaronaControllerTest {
                     .andExpect(status().isNoContent());
 
             verify(caronaService).finalizarCarona(CARONA_ID, USUARIO_ID);
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /caronas")
+    class BuscarCaronasDisponiveis {
+
+        @Test
+        @DisplayName("deve retornar caronas disponíveis para o usuário autenticado")
+        void deveBuscarCaronasDisponiveis() throws Exception {
+
+            CaronaBuscaResponseDTO caronaDto = new CaronaBuscaResponseDTO(
+                    1L,
+                    new EnderecoDTO("Partage Shopping", new java.math.BigDecimal("-7.2349"), new java.math.BigDecimal("-35.8692")),
+                    new EnderecoDTO("UFCG", new java.math.BigDecimal("-7.2145"), new java.math.BigDecimal("-35.9087")),
+                    new MotoristaBuscaDTO(3L, "Jennifer", "FEMININO", "Ciência da Computação", 4.0),
+                    java.time.LocalDateTime.parse("2026-07-22T07:30:00"),
+                    4,
+                    new java.math.BigDecimal("2.00")
+            );
+
+            when(buscaCaronaService.buscarCaronasDisponiveis(any(BuscaCaronaFiltroDTO.class), eq(USUARIO_ID)))
+                    .thenReturn(List.of(caronaDto));
+
+            mockMvc.perform(get("/caronas")
+                            .param("origemLatitude", "-7.22850")
+                            .param("origemLongitude", "-35.87120")
+                            .param("dataHoraSaida", "2026-07-22T07:30:00"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$[0].id").value(1))
+                    .andExpect(jsonPath("$[0].motorista.nome").value("Jennifer"))
+                    .andExpect(jsonPath("$[0].motorista.reputacao").value(4.0))
+                    .andExpect(jsonPath("$[0].vagasDisponiveis").value(4));
+
+            verify(buscaCaronaService).buscarCaronasDisponiveis(any(BuscaCaronaFiltroDTO.class), eq(USUARIO_ID));
+        }
+
+        @Test
+        @DisplayName("deve retornar lista vazia quando não há caronas disponíveis")
+        void deveRetornarListaVaziaQuandoNaoHaCaronas() throws Exception {
+
+            when(buscaCaronaService.buscarCaronasDisponiveis(any(BuscaCaronaFiltroDTO.class), eq(USUARIO_ID)))
+                    .thenReturn(List.of());
+
+            mockMvc.perform(get("/caronas"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$").isArray())
+                    .andExpect(jsonPath("$").isEmpty());
         }
     }
 }

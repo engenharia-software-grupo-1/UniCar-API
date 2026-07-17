@@ -14,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.LocalDateTime;
 
+import com.unicar.dto.usuario.PerfilUsuarioDTO;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,7 +35,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unicar.domain.Usuario;
 import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
 import com.unicar.dto.usuario.UsuarioDTO;
-import com.unicar.dto.usuario.UsuarioPublicoDTO;
 import com.unicar.enums.Genero;
 import com.unicar.security.JwtAuthenticationFilter;
 import com.unicar.security.UsuarioDetails;
@@ -115,42 +115,6 @@ class UsuarioControllerTest {
     }
  
     @Nested
-    @DisplayName("GET /usuarios/{matricula}")
-    class BuscarUsuario {
- 
-        @Test
-        @DisplayName("deve retornar 200 e o usuário público pela matrícula")
-        void deveBuscarUsuarioPublico() throws Exception {
-            UsuarioPublicoDTO dto = new UsuarioPublicoDTO(
-                    1L, "20230001", "Oscar Rodrigues", "oscar@teste.com", "Computação"
-            );
- 
-            when(usuarioService.buscarUsuario("20230001")).thenReturn(dto);
- 
-            mockMvc.perform(get("/usuarios/20230001"))
-                    .andExpect(status().isOk())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.id").value(1))
-                    .andExpect(jsonPath("$.matricula").value("20230001"))
-                    .andExpect(jsonPath("$.nome").value("Oscar Rodrigues"));
- 
-            verify(usuarioService).buscarUsuario("20230001");
-        }
- 
-        @Test
-        @DisplayName("deve retornar 404 quando a matrícula não existir")
-        void deveRetornar404QuandoMatriculaNaoExiste() throws Exception {
-            when(usuarioService.buscarUsuario("99999999"))
-                    .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
- 
-            mockMvc.perform(get("/usuarios/99999999"))
-                    .andExpect(status().isNotFound());
- 
-            verify(usuarioService).buscarUsuario("99999999");
-        }
-    }
- 
-    @Nested
     @DisplayName("PATCH /usuarios/me")
     class AtualizarPerfil {
  
@@ -192,6 +156,50 @@ class UsuarioControllerTest {
                     .andExpect(status().isNoContent());
  
             verify(usuarioService).desativarPerfil(1L);
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /usuarios/{id}/perfil-publico")
+    class ConsultarPerfilPublico {
+
+        @Test
+        @DisplayName("deve retornar 200 e o perfil público do usuário")
+        void deveRetornarPerfilPublico() throws Exception {
+            PerfilUsuarioDTO dto = new PerfilUsuarioDTO(
+                    1L,
+                    "Oscar Rodrigues",
+                    "Computação",
+                    "NAO_INFORMADO",
+                    4.8,
+                    15
+            );
+
+            when(usuarioService.perfilPublico(1L)).thenReturn(dto);
+
+            mockMvc.perform(get("/usuarios/1/perfil-publico"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.id").value(1))
+                    .andExpect(jsonPath("$.nome").value("Oscar Rodrigues"))
+                    .andExpect(jsonPath("$.curso").value("Computação"))
+                    .andExpect(jsonPath("$.genero").value("NAO_INFORMADO"))
+                    .andExpect(jsonPath("$.reputacao").value(4.8))
+                    .andExpect(jsonPath("$.quantidadeAvaliacoes").value(15));
+
+            verify(usuarioService).perfilPublico(1L);
+        }
+
+        @Test
+        @DisplayName("deve retornar 404 quando o id do usuário não for encontrado")
+        void deveRetornar404QuandoUsuarioNaoExiste() throws Exception {
+            when(usuarioService.perfilPublico(999L))
+                    .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
+
+            mockMvc.perform(get("/usuarios/999/perfil-publico"))
+                    .andExpect(status().isNotFound());
+
+            verify(usuarioService).perfilPublico(999L);
         }
     }
 }

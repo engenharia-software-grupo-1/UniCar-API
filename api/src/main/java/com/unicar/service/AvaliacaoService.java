@@ -11,6 +11,7 @@ import com.unicar.exception.CaronaNaoEncontradaException;
 import com.unicar.exception.RegraDeNegocioException;
 import com.unicar.exception.UsuarioNaoEncontradoException;
 import com.unicar.repository.AvaliacaoRepository;
+import com.unicar.repository.AvaliacaoRepository.ReputacaoAgregadaProjection;
 import com.unicar.repository.CaronaRepository;
 import com.unicar.repository.ReservaCaronaRepository;
 import com.unicar.repository.UsuarioRepository;
@@ -20,6 +21,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +33,10 @@ public class AvaliacaoService {
     private final CaronaRepository caronaRepository;
     private final ReservaCaronaRepository reservaCaronaRepository;
 
+    /**
+     * Registra a avaliação de um usuário sobre outro em uma carona finalizada,
+     * validando participação, nota e se já não foi avaliado antes.
+     */
     @Transactional
     public void avaliar(Long usuarioId, AvaliacaoRequestDTO dto) {
 
@@ -54,6 +61,9 @@ public class AvaliacaoService {
         avaliacaoRepository.save(avaliacao);
     }
 
+    /**
+     * Lista todas as avaliações recebidas por um usuário.
+     */
     public List<AvaliacaoRecebidaDTO> listarAvaliacoesRecebidas(Long usuarioId) {
 
         buscarUsuario(usuarioId);
@@ -64,6 +74,9 @@ public class AvaliacaoService {
                 .toList();
     }
 
+    /**
+     * Calcula a reputação (média e quantidade de avaliações) de um único usuário.
+     */
     public ReputacaoDTO buscarReputacao(Long usuarioId) {
 
         Usuario usuario = buscarUsuario(usuarioId);
@@ -76,6 +89,33 @@ public class AvaliacaoService {
                 media == null ? 0.0 : media,
                 quantidade
         );
+    }
+
+    /**
+     * Calcula a reputação de vários usuários em uma única query agregada,
+     * evitando N chamadas ao banco quando há múltiplos motoristas a avaliar
+     * (usado, por exemplo, na busca de caronas disponíveis).
+     * Usuários sem avaliação retornam média 0.0 e quantidade 0.
+     */
+    public List<ReputacaoDTO> buscarReputacoes(List<Long> usuarioIds) {
+        if (usuarioIds == null || usuarioIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<ReputacaoAgregadaProjection> agregadas =
+                avaliacaoRepository.calcularMediasPorUsuarios(usuarioIds);
+
+        Map<Long, ReputacaoAgregadaProjection> porUsuario = agregadas.stream()
+                .collect(Collectors.toMap(ReputacaoAgregadaProjection::getUsuarioId, r -> r));
+
+        return usuarioIds.stream()
+                .map(id -> {
+                    ReputacaoAgregadaProjection r = porUsuario.get(id);
+                    double media = (r != null && r.getMedia() != null) ? r.getMedia() : 0.0;
+                    long quantidade = (r != null) ? r.getQuantidade() : 0L;
+                    return new ReputacaoDTO(id, media, quantidade);
+                })
+                .toList();
     }
 
     private Usuario buscarUsuario(Long id) {
