@@ -4,7 +4,6 @@ import com.unicar.domain.Usuario;
 import com.unicar.dto.usuario.PerfilUsuarioDTO;
 import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
 import com.unicar.dto.usuario.UsuarioDTO;
-import com.unicar.dto.usuario.UsuarioPublicoDTO;
 import com.unicar.repository.UsuarioRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -22,10 +21,6 @@ public class UsuarioService {
 
     public UsuarioDTO buscarPerfil(Long usuarioId) {
         return UsuarioDTO.from(buscarUsuarioAtivo(usuarioId));
-    }
-
-    public UsuarioPublicoDTO buscarUsuario(String matricula) {
-        return UsuarioPublicoDTO.from(buscarUsuarioAtivo(matricula));
     }
 
     public PerfilUsuarioDTO perfilPublico(Long id) {
