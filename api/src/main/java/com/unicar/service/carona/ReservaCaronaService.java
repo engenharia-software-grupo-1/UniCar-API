@@ -58,7 +58,7 @@ public class ReservaCaronaService {
             throw new EstadoInvalidoException("Apenas caronas com status CRIADA podem receber novas reservas");
         }
 
-        int vagasOcupadas = repository.countByCarona_IdAndStatus(carona.getId(), StatusReserva.ACEITA);
+        int vagasOcupadas = repository.somarPassageirosPorCaronaEStatus(carona.getId(), StatusReserva.ACEITA);
         int vagasDisponiveis = carona.getVagasTotais() - vagasOcupadas;
         if (request.quantidadePassageiros() > vagasDisponiveis) {
             throw new RegraDeNegocioException("Quantidade de vagas indisponível");
@@ -131,7 +131,7 @@ public class ReservaCaronaService {
         }
 
         Carona carona = buscarCaronaParaAtualizacao(reserva.getCarona().getId());
-        int vagasOcupadas = repository.countByCarona_IdAndStatus(carona.getId(), StatusReserva.ACEITA);
+        int vagasOcupadas = repository.somarPassageirosPorCaronaEStatus(carona.getId(), StatusReserva.ACEITA);
         int vagasDisponiveis = carona.getVagasTotais() - vagasOcupadas;
         if (reserva.getQuantidadePassageiros() > vagasDisponiveis) {
             throw new RegraDeNegocioException("Quantidade de vagas indisponível");

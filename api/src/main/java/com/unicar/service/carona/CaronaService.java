@@ -282,7 +282,7 @@ public class CaronaService {
     }
 
     private int contarPassageirosConfirmados(Long caronaId) {
-        return reservaCaronaRepository.countByCarona_IdAndStatus(caronaId, StatusReserva.ACEITA);
+        return reservaCaronaRepository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA);
     }
 
     private void validarValorContribuicao(EnderecoDTO origem, EnderecoDTO destino, BigDecimal valorContribuicao) {

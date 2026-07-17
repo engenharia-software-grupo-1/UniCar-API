@@ -137,7 +137,7 @@ class ReservaCaronaServiceTest {
         @DisplayName("Deve criar reserva PENDENTE com valor calculado corretamente")
         void deveCriarReserva() {
             when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
-            when(repository.countByCarona_IdAndStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
             when(repository.existsByCarona_IdAndUsuario_IdAndStatusIn(eq(caronaId), eq(usuarioId), anyList()))
                     .thenReturn(false);
             when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
@@ -192,9 +192,26 @@ class ReservaCaronaServiceTest {
         void naoDeveReservarSemVagasSuficientes() {
             carona.setVagasTotais(2);
             when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
-            when(repository.countByCarona_IdAndStatus(caronaId, StatusReserva.ACEITA)).thenReturn(1);
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(1);
 
             ReservaRequestDTO request = criarRequest(EMBARQUE_COMPATIVEL_LAT, EMBARQUE_COMPATIVEL_LON, 2);
+
+            assertThrows(RegraDeNegocioException.class, () ->
+                    service.solicitar(request, usuarioId));
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Não deve reservar quando uma única reserva aceita com múltiplos passageiros já ocupa todas as vagas")
+        void naoDeveReservarQuandoReservaComMultiplosPassageirosOcupaTodasAsVagas() {
+            carona.setVagasTotais(4);
+            when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
+            // Uma única reserva ACEITA com 4 passageiros deve contar como 4 vagas ocupadas,
+            // não como 1 (quantidade de linhas de reserva).
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(4);
+
+            ReservaRequestDTO request = criarRequest(EMBARQUE_COMPATIVEL_LAT, EMBARQUE_COMPATIVEL_LON, 1);
 
             assertThrows(RegraDeNegocioException.class, () ->
                     service.solicitar(request, usuarioId));
@@ -206,7 +223,7 @@ class ReservaCaronaServiceTest {
         @DisplayName("Não deve permitir reserva duplicada para a mesma carona")
         void naoDevePermitirReservaDuplicada() {
             when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
-            when(repository.countByCarona_IdAndStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
             when(repository.existsByCarona_IdAndUsuario_IdAndStatusIn(eq(caronaId), eq(usuarioId), anyList()))
                     .thenReturn(true);
 
@@ -222,7 +239,7 @@ class ReservaCaronaServiceTest {
         @DisplayName("Não deve reservar quando local de embarque é incompatível com o trajeto")
         void naoDeveReservarComEmbarqueIncompativel() {
             when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
-            when(repository.countByCarona_IdAndStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
             when(repository.existsByCarona_IdAndUsuario_IdAndStatusIn(eq(caronaId), eq(usuarioId), anyList()))
                     .thenReturn(false);
 
@@ -381,7 +398,7 @@ class ReservaCaronaServiceTest {
         void deveAceitarReserva() {
             when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
             when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
-            when(repository.countByCarona_IdAndStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
             when(repository.save(any(ReservaCarona.class))).thenAnswer(inv -> inv.getArgument(0));
 
             ReservaStatusResponseDTO response = service.aceitar(reservaId, motoristaId);
@@ -420,7 +437,24 @@ class ReservaCaronaServiceTest {
             carona.setVagasTotais(2);
             when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
             when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
-            when(repository.countByCarona_IdAndStatus(caronaId, StatusReserva.ACEITA)).thenReturn(1);
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(1);
+
+            assertThrows(RegraDeNegocioException.class, () ->
+                    service.aceitar(reservaId, motoristaId));
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Não deve aceitar quando uma única reserva aceita com múltiplos passageiros já ocupa todas as vagas")
+        void naoDeveAceitarQuandoReservaComMultiplosPassageirosOcupaTodasAsVagas() {
+            carona.setVagasTotais(4);
+            reserva.setQuantidadePassageiros(1);
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+            when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
+            // Outra reserva ACEITA de 4 passageiros já ocupa a carona inteira, mesmo sendo
+            // uma única linha na tabela de reservas.
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(4);
 
             assertThrows(RegraDeNegocioException.class, () ->
                     service.aceitar(reservaId, motoristaId));
