@@ -98,14 +98,4 @@ public class CaronaSpecifications {
             );
         };
     }
-        return (root, query, cb) -> {
-            if (dataHoraSaida == null) return cb.conjunction();
-            LocalDateTime inicioDia = dataHoraSaida.toLocalDate().atStartOfDay();
-            LocalDateTime fimDia = dataHoraSaida.toLocalDate().atTime(23, 59, 59, 999_000_000);
-            return cb.and(
-                    cb.greaterThanOrEqualTo(root.get("dataHoraPartida"), dataHoraSaida),
-                    cb.lessThanOrEqualTo(root.get("dataHoraPartida"), fimDia)
-            );
-        };
-    }
 }
