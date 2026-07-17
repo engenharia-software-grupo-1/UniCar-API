@@ -630,7 +630,7 @@ class ReservaCaronaServiceTest {
             reserva.setStatus(StatusReserva.PENDENTE);
 
 
-            when(repository.findById(reservaId))
+            when(repository.findByIdForUpdate(reservaId))
                     .thenReturn(Optional.of(reserva));
 
 
@@ -658,7 +658,7 @@ class ReservaCaronaServiceTest {
             reserva.setStatus(StatusReserva.ACEITA);
 
 
-            when(repository.findById(reservaId))
+            when(repository.findByIdForUpdate(reservaId))
                     .thenReturn(Optional.of(reserva));
 
 
@@ -686,7 +686,7 @@ class ReservaCaronaServiceTest {
             reserva.setStatus(StatusReserva.CANCELADA);
 
 
-            when(repository.findById(reservaId))
+            when(repository.findByIdForUpdate(reservaId))
                     .thenReturn(Optional.of(reserva));
 
             assertThrows(
@@ -711,7 +711,7 @@ class ReservaCaronaServiceTest {
             reserva.setStatus(StatusReserva.PENDENTE);
 
 
-            when(repository.findById(reservaId))
+            when(repository.findByIdForUpdate(reservaId))
                     .thenReturn(Optional.of(reserva));
 
 
