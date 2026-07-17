@@ -6,6 +6,7 @@ import com.unicar.dto.carona.ReservaRecebidaResponseDTO;
 import com.unicar.dto.carona.ReservaRequestDTO;
 import com.unicar.dto.carona.ReservaResponseDTO;
 import com.unicar.dto.carona.ReservaSimulacaoResponseDTO;
+import com.unicar.dto.carona.ReservaStatusResponseDTO;
 import com.unicar.security.UsuarioDetails;
 import com.unicar.service.carona.ReservaCaronaService;
 
@@ -88,5 +89,32 @@ public class ReservaCaronaController {
 
         reservaCaronaService.removerReserva(id,usuario.getUsuario().getId());
         return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/aceitar")
+    @Operation(summary = "Aceita uma solicitação de reserva")
+    public ResponseEntity<ReservaStatusResponseDTO> aceitar(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UsuarioDetails usuario) {
+
+        return ResponseEntity.ok(reservaCaronaService.aceitar(id, usuario.getUsuario().getId()));
+    }
+
+    @PatchMapping("/{id}/recusar")
+    @Operation(summary = "Recusa uma solicitação de reserva")
+    public ResponseEntity<ReservaStatusResponseDTO> recusar(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UsuarioDetails usuario) {
+
+        return ResponseEntity.ok(reservaCaronaService.recusar(id, usuario.getUsuario().getId()));
+    }
+
+    @PatchMapping("/{id}/cancelar")
+    @Operation(summary = "Cancela uma reserva")
+    public ResponseEntity<ReservaStatusResponseDTO> cancelar(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UsuarioDetails usuario) {
+
+        return ResponseEntity.ok(reservaCaronaService.cancelar(id, usuario.getUsuario().getId()));
     }
 }

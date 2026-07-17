@@ -166,6 +166,6 @@ public class BuscaCaronaService {
     }
 
     private int contarPassageirosConfirmados(Long caronaId) {
-        return reservaCaronaRepository.countByCarona_IdAndStatus(caronaId, com.unicar.enums.StatusReserva.ACEITA);
+        return reservaCaronaRepository.somarPassageirosPorCaronaEStatus(caronaId, com.unicar.enums.StatusReserva.ACEITA);
     }
 }

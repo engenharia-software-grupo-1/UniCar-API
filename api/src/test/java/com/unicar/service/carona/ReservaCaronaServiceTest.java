@@ -10,6 +10,7 @@ import com.unicar.dto.carona.ReservaRecebidaResponseDTO;
 import com.unicar.dto.carona.ReservaRequestDTO;
 import com.unicar.dto.carona.ReservaResponseDTO;
 import com.unicar.dto.carona.ReservaSimulacaoResponseDTO;
+import com.unicar.dto.carona.ReservaStatusResponseDTO;
 import com.unicar.enums.StatusCarona;
 import com.unicar.enums.StatusReserva;
 import com.unicar.exception.AcessoNegadoException;
@@ -92,10 +93,6 @@ class ReservaCaronaServiceTest {
         motorista.setId(motoristaId);
         motorista.setNome("João Motorista");
 
-        reserva = new ReservaCarona();
-        reserva.setId(reservaId);
-        reserva.setUsuario(usuario);
-
         carona = new Carona();
         carona.setId(caronaId);
         carona.setMotorista(motorista);
@@ -109,6 +106,11 @@ class ReservaCaronaServiceTest {
         carona.setDataHoraPartida(LocalDateTime.now().plusDays(1));
         carona.setDestinoLatitude(DESTINO_LAT);
         carona.setDestinoLongitude(DESTINO_LON);
+
+        reserva = new ReservaCarona();
+        reserva.setId(reservaId);
+        reserva.setUsuario(usuario);
+        reserva.setCarona(carona);
     }
 
     private ReservaRequestDTO criarRequest(BigDecimal embarqueLat, BigDecimal embarqueLon, int quantidadePassageiros) {
@@ -137,7 +139,7 @@ class ReservaCaronaServiceTest {
         @DisplayName("Deve criar reserva PENDENTE com valor calculado corretamente")
         void deveCriarReserva() {
             when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
-            when(repository.countByCarona_IdAndStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
             when(repository.existsByCarona_IdAndUsuario_IdAndStatusIn(eq(caronaId), eq(usuarioId), anyList()))
                     .thenReturn(false);
             when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
@@ -192,9 +194,26 @@ class ReservaCaronaServiceTest {
         void naoDeveReservarSemVagasSuficientes() {
             carona.setVagasTotais(2);
             when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
-            when(repository.countByCarona_IdAndStatus(caronaId, StatusReserva.ACEITA)).thenReturn(1);
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(1);
 
             ReservaRequestDTO request = criarRequest(EMBARQUE_COMPATIVEL_LAT, EMBARQUE_COMPATIVEL_LON, 2);
+
+            assertThrows(RegraDeNegocioException.class, () ->
+                    service.solicitar(request, usuarioId));
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Não deve reservar quando uma única reserva aceita com múltiplos passageiros já ocupa todas as vagas")
+        void naoDeveReservarQuandoReservaComMultiplosPassageirosOcupaTodasAsVagas() {
+            carona.setVagasTotais(4);
+            when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
+            // Uma única reserva ACEITA com 4 passageiros deve contar como 4 vagas ocupadas,
+            // não como 1 (quantidade de linhas de reserva).
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(4);
+
+            ReservaRequestDTO request = criarRequest(EMBARQUE_COMPATIVEL_LAT, EMBARQUE_COMPATIVEL_LON, 1);
 
             assertThrows(RegraDeNegocioException.class, () ->
                     service.solicitar(request, usuarioId));
@@ -206,7 +225,7 @@ class ReservaCaronaServiceTest {
         @DisplayName("Não deve permitir reserva duplicada para a mesma carona")
         void naoDevePermitirReservaDuplicada() {
             when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
-            when(repository.countByCarona_IdAndStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
             when(repository.existsByCarona_IdAndUsuario_IdAndStatusIn(eq(caronaId), eq(usuarioId), anyList()))
                     .thenReturn(true);
 
@@ -222,7 +241,7 @@ class ReservaCaronaServiceTest {
         @DisplayName("Não deve reservar quando local de embarque é incompatível com o trajeto")
         void naoDeveReservarComEmbarqueIncompativel() {
             when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
-            when(repository.countByCarona_IdAndStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
             when(repository.existsByCarona_IdAndUsuario_IdAndStatusIn(eq(caronaId), eq(usuarioId), anyList()))
                     .thenReturn(false);
 
@@ -363,6 +382,239 @@ class ReservaCaronaServiceTest {
 
             assertThrows(AcessoNegadoException.class, () ->
                     service.buscarDetalhe(reservaId, outroUsuarioId));
+        }
+    }
+
+    @Nested
+    @DisplayName("Aceitar reserva")
+    class AceitarReserva {
+
+        @BeforeEach
+        void setupReserva() {
+            reserva.setStatus(StatusReserva.PENDENTE);
+            reserva.setQuantidadePassageiros(2);
+        }
+
+        @Test
+        @DisplayName("Deve aceitar reserva pendente quando há vagas suficientes")
+        void deveAceitarReserva() {
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+            when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
+            when(repository.save(any(ReservaCarona.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            ReservaStatusResponseDTO response = service.aceitar(reservaId, motoristaId);
+
+            assertEquals(StatusReserva.ACEITA, response.status());
+            assertEquals(StatusReserva.ACEITA, reserva.getStatus());
+            assertNotNull(reserva.getDataResposta());
+        }
+
+        @Test
+        @DisplayName("Não deve aceitar se usuário não for o motorista da carona")
+        void naoDeveAceitarSeNaoForMotorista() {
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+
+            assertThrows(AcessoNegadoException.class, () ->
+                    service.aceitar(reservaId, outroUsuarioId));
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Não deve aceitar reserva que não está PENDENTE")
+        void naoDeveAceitarReservaComStatusInvalido() {
+            reserva.setStatus(StatusReserva.ACEITA);
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+
+            assertThrows(EstadoInvalidoException.class, () ->
+                    service.aceitar(reservaId, motoristaId));
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Não deve aceitar quando não há vagas suficientes")
+        void naoDeveAceitarSemVagasSuficientes() {
+            carona.setVagasTotais(2);
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+            when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(1);
+
+            assertThrows(RegraDeNegocioException.class, () ->
+                    service.aceitar(reservaId, motoristaId));
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Não deve aceitar quando uma única reserva aceita com múltiplos passageiros já ocupa todas as vagas")
+        void naoDeveAceitarQuandoReservaComMultiplosPassageirosOcupaTodasAsVagas() {
+            carona.setVagasTotais(4);
+            reserva.setQuantidadePassageiros(1);
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+            when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
+            // Outra reserva ACEITA de 4 passageiros já ocupa a carona inteira, mesmo sendo
+            // uma única linha na tabela de reservas.
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(4);
+
+            assertThrows(RegraDeNegocioException.class, () ->
+                    service.aceitar(reservaId, motoristaId));
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Deve lançar erro quando reserva não existir")
+        void deveLancarErroQuandoReservaNaoExistir() {
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.empty());
+
+            assertThrows(ReservaNaoEncontradaException.class, () ->
+                    service.aceitar(reservaId, motoristaId));
+        }
+    }
+
+    @Nested
+    @DisplayName("Recusar reserva")
+    class RecusarReserva {
+
+        @BeforeEach
+        void setupReserva() {
+            reserva.setStatus(StatusReserva.PENDENTE);
+        }
+
+        @Test
+        @DisplayName("Deve recusar reserva pendente")
+        void deveRecusarReserva() {
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+            when(repository.save(any(ReservaCarona.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            ReservaStatusResponseDTO response = service.recusar(reservaId, motoristaId);
+
+            assertEquals(StatusReserva.RECUSADA, response.status());
+            assertEquals(StatusReserva.RECUSADA, reserva.getStatus());
+            assertNotNull(reserva.getDataResposta());
+        }
+
+        @Test
+        @DisplayName("Não deve recusar se usuário não for o motorista da carona")
+        void naoDeveRecusarSeNaoForMotorista() {
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+
+            assertThrows(AcessoNegadoException.class, () ->
+                    service.recusar(reservaId, outroUsuarioId));
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Não deve recusar reserva que não está PENDENTE")
+        void naoDeveRecusarReservaComStatusInvalido() {
+            reserva.setStatus(StatusReserva.CANCELADA);
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+
+            assertThrows(EstadoInvalidoException.class, () ->
+                    service.recusar(reservaId, motoristaId));
+
+            verify(repository, never()).save(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("Cancelar reserva")
+    class CancelarReserva {
+
+        @Test
+        @DisplayName("Deve permitir que o passageiro cancele reserva PENDENTE")
+        void devePermitirPassageiroCancelarPendente() {
+            reserva.setStatus(StatusReserva.PENDENTE);
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+            when(repository.save(any(ReservaCarona.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            ReservaStatusResponseDTO response = service.cancelar(reservaId, usuarioId);
+
+            assertEquals(StatusReserva.CANCELADA, response.status());
+        }
+
+        @Test
+        @DisplayName("Deve permitir que o passageiro cancele reserva ACEITA")
+        void devePermitirPassageiroCancelarAceita() {
+            reserva.setStatus(StatusReserva.ACEITA);
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+            when(repository.save(any(ReservaCarona.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            ReservaStatusResponseDTO response = service.cancelar(reservaId, usuarioId);
+
+            assertEquals(StatusReserva.CANCELADA, response.status());
+        }
+
+        @Test
+        @DisplayName("Deve permitir que o motorista cancele reserva ACEITA")
+        void devePermitirMotoristaCancelarAceita() {
+            reserva.setStatus(StatusReserva.ACEITA);
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+            when(repository.save(any(ReservaCarona.class))).thenAnswer(inv -> inv.getArgument(0));
+
+            ReservaStatusResponseDTO response = service.cancelar(reservaId, motoristaId);
+
+            assertEquals(StatusReserva.CANCELADA, response.status());
+        }
+
+        @Test
+        @DisplayName("Não deve permitir que o motorista cancele reserva PENDENTE")
+        void naoDevePermitirMotoristaCancelarPendente() {
+            reserva.setStatus(StatusReserva.PENDENTE);
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+
+            assertThrows(EstadoInvalidoException.class, () ->
+                    service.cancelar(reservaId, motoristaId));
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Não deve permitir cancelar reserva finalizada")
+        void naoDevePermitirCancelarReservaFinalizada() {
+            reserva.setStatus(StatusReserva.CONCLUIDA);
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+
+            assertThrows(EstadoInvalidoException.class, () ->
+                    service.cancelar(reservaId, usuarioId));
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Não deve permitir cancelar reserva já cancelada")
+        void naoDevePermitirCancelarReservaJaCancelada() {
+            reserva.setStatus(StatusReserva.CANCELADA);
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+
+            assertThrows(EstadoInvalidoException.class, () ->
+                    service.cancelar(reservaId, usuarioId));
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Não deve permitir que terceiro cancele a reserva")
+        void naoDevePermitirTerceiroCancelar() {
+            reserva.setStatus(StatusReserva.PENDENTE);
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+
+            assertThrows(AcessoNegadoException.class, () ->
+                    service.cancelar(reservaId, outroUsuarioId));
+
+            verify(repository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Deve lançar erro quando reserva não existir")
+        void deveLancarErroQuandoReservaNaoExistir() {
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.empty());
+
+            assertThrows(ReservaNaoEncontradaException.class, () ->
+                    service.cancelar(reservaId, usuarioId));
         }
     }
 
