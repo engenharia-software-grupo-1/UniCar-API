@@ -40,7 +40,7 @@ public class AvaliacaoService {
         validarNota(dto.nota());
         validarCaronaFinalizada(carona);
         validarParticipacao(carona, avaliador.getId(), avaliado.getId());
-        validarNaoAvaliouAntes(carona.getId(), avaliador.getId());
+        validarNaoAvaliouAntes(carona.getId(), avaliador.getId(), avaliado.getId());
 
         Avaliacao avaliacao = Avaliacao.builder()
                 .carona(carona)
@@ -138,15 +138,9 @@ public class AvaliacaoService {
         }
     }
 
-    private void validarNaoAvaliouAntes(Long caronaId,
-                                        Long avaliadorId) {
-
-        if (avaliacaoRepository.existsByCaronaIdAndAvaliadorId(
-                caronaId,
-                avaliadorId)) {
-
-            throw new RegraDeNegocioException(
-                    "Você já avaliou nesta carona.");
+    private void validarNaoAvaliouAntes(Long caronaId, Long avaliadorId, Long avaliadoId) {
+        if (avaliacaoRepository.existsByCaronaIdAndAvaliadorIdAndAvaliadoId(caronaId, avaliadorId, avaliadoId)) {
+            throw new RegraDeNegocioException("Você já avaliou este usuário nesta carona.");
         }
     }
 }
