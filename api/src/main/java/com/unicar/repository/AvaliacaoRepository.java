@@ -11,7 +11,7 @@ public interface AvaliacaoRepository extends JpaRepository<Avaliacao, Long> {
 
     List<Avaliacao> findByAvaliadoId(Long avaliadoId);
 
-    boolean existsByCaronaIdAndAvaliadorId(Long caronaId, Long avaliadorId);
+    boolean existsByCaronaIdAndAvaliadorIdAndAvaliadoId(Long caronaId, Long avaliadorId, Long avaliadoId);
 
     @Query("""
             SELECT AVG(a.nota)
