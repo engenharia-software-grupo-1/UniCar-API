@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:test
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  flyway:
+    enabled: false
+
+unicar:
+  jwt:
+    secret: "umaChaveSecretaFicticiaComTamanhoSuficienteParaOsTestesDoUniCar2026"
+    expiration-ms: 3600000
+
+cors:
+  allowed-origins: http://localhost:3000

@@ -1,7 +1,9 @@
 package com.unicar.controller;
 
+import com.unicar.dto.usuario.PerfilUsuarioDTO;
 import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
 import com.unicar.dto.usuario.UsuarioDTO;
+import com.unicar.dto.usuario.UsuarioPublicoDTO;
 import com.unicar.security.UsuarioDetails;
 import com.unicar.service.UsuarioService;
 
@@ -12,12 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/usuarios")
@@ -31,6 +28,14 @@ public class UsuarioController {
     @Operation(summary = "Consulta perfil do usuário autenticado")
     public ResponseEntity<UsuarioDTO> buscarPerfil(@AuthenticationPrincipal UsuarioDetails userDetails) {
         return ResponseEntity.ok(usuarioService.buscarPerfil(userDetails.getUsuario().getId()));
+    }
+
+    @GetMapping("/{matricula}")
+    @Operation(summary = "Consulta os dados públicos de um usuário")
+    public ResponseEntity<UsuarioPublicoDTO> buscarUsuario(
+            @PathVariable String matricula) {
+
+        return ResponseEntity.ok(usuarioService.buscarUsuario(matricula));
     }
 
     @PatchMapping("/me")
@@ -47,5 +52,11 @@ public class UsuarioController {
     public ResponseEntity<Void> desativarPerfil(@AuthenticationPrincipal UsuarioDetails userDetails) {
         usuarioService.desativarPerfil(userDetails.getUsuario().getId());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/perfil-publico")
+    @Operation(summary = "Lista perfil público de um usuário")
+    public ResponseEntity<PerfilUsuarioDTO> perfilPublico(@PathVariable Long id, @AuthenticationPrincipal UsuarioDetails usuarioDetails){
+        return ResponseEntity.ok(usuarioService.perfilPublico(id));
     }
 }

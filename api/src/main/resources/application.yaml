@@ -11,15 +11,20 @@ spring:
     hibernate:
       ddl-auto: validate
 
+  flyway:
+    validate-on-migrate: false
+
 unicar:
   jwt:
-    secret: ${JWT_SECRET}
+    secret: ${JWT_SECRET:ZGV2LXNlY3JldC1rZXktZm9yLWxvY2FsLWRldmVsb3BtZW50}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
 eureca:
   url:
     tokens: ${EURECA_TOKENS_URL:https://eureca.sti.ufcg.edu.br/as-sig/tokens}
+    estudante: ${EURECA_ESTUDANTE_URL:https://eureca.sti.ufcg.edu.br/das-sig/v1/estudantes/estudante}
     profile: ${EURECA_PROFILE_URL:https://eureca.sti.ufcg.edu.br/as-sig/profile}
+    professor: ${EURECA_PROFESSOR_URL:https://eureca.sti.ufcg.edu.br/das-sig/v1/professores/professor}
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
