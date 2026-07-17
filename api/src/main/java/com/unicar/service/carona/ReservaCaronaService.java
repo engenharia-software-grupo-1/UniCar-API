@@ -81,7 +81,7 @@ public class ReservaCaronaService {
                 .origemEmbarqueLongitude(request.origemEmbarque().longitude())
                 .valorContribuicao(valorContribuicao)
                 .status(StatusReserva.PENDENTE)
-                .dataExpiracao(carona.getDataHoraPartida())
+                .dataExpiracao(carona.getDataHoraPartida().minusHours(1))
                 .build();
 
         reserva = repository.save(reserva);
