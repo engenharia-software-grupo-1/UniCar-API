@@ -5,6 +5,7 @@ import com.unicar.dto.interesseTrajeto.CoordenadaDTO;
 import com.unicar.dto.interesseTrajeto.InteresseTrajetoCriadoDTO;
 import com.unicar.dto.interesseTrajeto.InteresseTrajetoDTO;
 import com.unicar.dto.interesseTrajeto.InteresseTrajetoRequest;
+import com.unicar.exception.InteresseNaoEncontrado;
 import com.unicar.exception.RegraDeNegocioException;
 import com.unicar.repository.InteresseTrajetoRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -58,7 +59,7 @@ public class InteresseTrajetoService{
 
         InteresseTrajeto interesse = repository
                 .findByIdAndUsuarioId(interesseId, usuarioId)
-                .orElseThrow(() -> new EntityNotFoundException("Interesse não encontrado."));
+                .orElseThrow(() -> new InteresseNaoEncontrado("Interesse não encontrado."));
 
         repository.delete(interesse);
     }
