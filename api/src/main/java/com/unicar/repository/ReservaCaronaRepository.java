@@ -7,7 +7,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
 import java.util.List;
 
 public interface ReservaCaronaRepository extends JpaRepository<ReservaCarona, Long> {
@@ -15,6 +14,10 @@ public interface ReservaCaronaRepository extends JpaRepository<ReservaCarona, Lo
     List<ReservaCarona> findByCaronaIdAndStatusIn(Long caronaId, List<StatusReserva> statusList);
     List<ReservaCarona> findByCaronaIdAndStatus(Long caronaId,StatusReserva status);
     List<ReservaCarona> findByCaronaId(Long caronaId);
+    boolean existsByCarona_IdAndUsuario_IdAndStatusIn(Long caronaId, Long usuarioId, List<StatusReserva> statusList);
+    List<ReservaCarona> findByUsuario_Id(Long usuarioId);
+    List<ReservaCarona> findByCarona_Motorista_Id(Long motoristaId);
+    boolean existsByCaronaIdAndUsuarioId(Long caronaId, Long usuarioId);
     @Query("SELECT r FROM ReservaCarona r " +
             "JOIN r.carona c " +
             "WHERE r.usuario.id = :passageiroId " +

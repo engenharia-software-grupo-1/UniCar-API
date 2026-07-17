@@ -2,25 +2,29 @@ package com.unicar.repository;
 
 import com.unicar.domain.Carona;
 import com.unicar.enums.StatusCarona;
+
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-public interface CaronaRepository extends JpaRepository<Carona, Long> {
+public interface CaronaRepository extends JpaRepository<Carona, Long>, JpaSpecificationExecutor<Carona> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from Carona c where c.id = :id")
     Optional<Carona> findByIdForUpdate(@Param("id") Long id);
+
     boolean existsByMotorista_IdAndStatus(Long motoristaId, StatusCarona status);
+
     List<Carona> findByMotorista_Id(Long motoristaId);
+
     @Query(value = """
             SELECT
                 c.*,
