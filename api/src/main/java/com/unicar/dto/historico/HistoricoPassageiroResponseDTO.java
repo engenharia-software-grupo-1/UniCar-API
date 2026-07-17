@@ -1,15 +1,15 @@
 package com.unicar.dto.historico;
 
 import com.unicar.enums.StatusCarona;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-public record HistoricoCaronaResponseDTO(
+public record HistoricoPassageiroResponseDTO(
+        Long reservaId,
         Long caronaId,
-        String origemDescricao,
-        String destinoDescricao,
-        LocalDateTime dataHoraPartida,
-        String nomeOutroParticipante,
-        BigDecimal valorContribuicao,
-        StatusCarona status
+        String origem,
+        String destino,
+        String motorista,
+        StatusCarona status,
+        LocalDateTime dataViagem,
+        Integer quantidadePassageiros
 ) {}

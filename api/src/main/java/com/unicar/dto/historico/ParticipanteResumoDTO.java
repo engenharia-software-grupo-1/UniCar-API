@@ -1,4 +1,6 @@
 package com.unicar.dto.historico;
 
-public class ascas {
-}
+public record ParticipanteResumoDTO(
+        Long id,
+        String nome
+) {}
