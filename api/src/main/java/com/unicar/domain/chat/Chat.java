@@ -1,5 +1,6 @@
 package com.unicar.domain.chat;
 
+import com.unicar.domain.ReservaCarona;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
