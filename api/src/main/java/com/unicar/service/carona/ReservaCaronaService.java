@@ -192,7 +192,7 @@ public class ReservaCaronaService {
 
     @Transactional
     public void removerReserva(Long reservaId, Long usuarioId) {
-        ReservaCarona reserva = buscarReserva(reservaId);
+        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
         validarDono(reserva, usuarioId);
 
         if (reserva.getStatus() != StatusReserva.PENDENTE && reserva.getStatus() != StatusReserva.ACEITA) {
