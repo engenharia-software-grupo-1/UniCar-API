@@ -308,6 +308,48 @@ class AuthServiceTest {
         }
 
         @Test
+        void deveRecomporCpfComZeroALEsquerdaPerdidoPeloEureca() {
+            mockServer.expect(requestTo(TOKEN_URL))
+                .andRespond(withSuccess("""
+                    {"token": "eureca-token-zero"}
+                    """, MediaType.APPLICATION_JSON));
+
+            mockServer.expect(requestTo(PROFILE_URL))
+                .andRespond(withSuccess("""
+                    {
+                      "id": "usuario.comzero",
+                      "name": "Usuario Com Zero",
+                      "email": "comzero@unicar.edu.br",
+                      "type": "Aluno",
+                      "attributes": {"aluno": "2022099"}
+                    }
+                    """, MediaType.APPLICATION_JSON));
+
+            mockServer.expect(requestToUriTemplate(ESTUDANTE_URL + "?estudante={matricula}", "2022099"))
+                .andRespond(withSuccess("""
+                    {
+                      "matricula_do_estudante": "2022099",
+                      "nome_do_curso": "Ciência da Computação",
+                      "sexo": "M",
+                      "cpf": "1122233396"
+                    }
+                    """, MediaType.APPLICATION_JSON));
+
+            given(usuarioRepository.findByCpf("01122233396")).willReturn(Optional.empty());
+            given(usuarioRepository.findByMatricula("2022099")).willReturn(Optional.empty());
+            given(usuarioRepository.findByEmail("comzero@unicar.edu.br")).willReturn(Optional.empty());
+            given(usuarioRepository.save(any(Usuario.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+            given(jwtService.gerarToken(any(Usuario.class))).willReturn("jwt-comzero");
+
+            authService.login(requestValido());
+
+            org.mockito.ArgumentCaptor<Usuario> captor = org.mockito.ArgumentCaptor.forClass(Usuario.class);
+            verify(usuarioRepository).save(captor.capture());
+            assertThat(captor.getValue().getCpf()).isEqualTo("01122233396");
+        }
+
+        @Test
         void deveLancarBadGatewayQuandoCpfRetornadoForInvalido() {
             mockServer.expect(requestTo(TOKEN_URL))
                 .andRespond(withSuccess("""

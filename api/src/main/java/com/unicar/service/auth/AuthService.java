@@ -370,7 +370,17 @@ public class AuthService {
     private static final int TAMANHO_CPF = 11;
 
     private static String sanitizarCpf(String cpf) {
-        return cpf == null ? null : cpf.replaceAll("\\D", "");
+        if (cpf == null) {
+            return null;
+        }
+        String digitos = cpf.replaceAll("\\D", "");
+        // Alguns retornos do Eureca tratam o CPF como número em algum ponto do
+        // pipeline, o que descarta o zero à esquerda (ex: 08539337401 vira
+        // 8539337401). Como o CPF sempre tem 11 dígitos, é seguro recompor.
+        if (digitos.length() == TAMANHO_CPF - 1) {
+            digitos = "0" + digitos;
+        }
+        return digitos;
     }
 
     private static String validarCpf(String cpfBruto) {
