@@ -1,5 +1,6 @@
 package com.unicar.service.chat;
 
+import com.unicar.domain.ReservaCarona;
 import com.unicar.domain.chat.Chat;
 import com.unicar.dto.chat.ChatDTO;
 import com.unicar.repository.chat.ChatRepository;
