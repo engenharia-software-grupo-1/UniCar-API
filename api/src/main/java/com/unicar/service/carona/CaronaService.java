@@ -16,8 +16,8 @@ import com.unicar.repository.CaronaRepository;
 import com.unicar.repository.ReservaCaronaRepository;
 import com.unicar.repository.UsuarioRepository;
 import com.unicar.repository.VeiculoRepository;
-
 import com.unicar.util.GeoUtils;
+
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;

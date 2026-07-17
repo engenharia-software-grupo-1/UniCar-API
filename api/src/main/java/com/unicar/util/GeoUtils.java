@@ -11,7 +11,8 @@ public final class GeoUtils {
 
     private static final double RAIO_TERRA_KM = 6371;
 
-    private GeoUtils() {}
+    private GeoUtils() {
+    }
 
     /**
      * Calcula a distância em km entre dois pontos geográficos usando a fórmula de Haversine.
