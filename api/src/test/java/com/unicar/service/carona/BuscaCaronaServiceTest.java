@@ -5,8 +5,12 @@ import com.unicar.domain.Usuario;
 import com.unicar.dto.avaliacao.ReputacaoDTO;
 import com.unicar.dto.carona.BuscaCaronaFiltroDTO;
 import com.unicar.dto.carona.CaronaBuscaResponseDTO;
+import com.unicar.dto.carona.CaronaProximaResponseDTO;
+import com.unicar.enums.StatusCarona;
+import com.unicar.enums.StatusReserva;
 import com.unicar.exception.RegraDeNegocioException;
 import com.unicar.repository.CaronaRepository;
+import com.unicar.repository.ReservaCaronaRepository;
 import com.unicar.service.AvaliacaoService;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +29,9 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,6 +39,8 @@ class BuscaCaronaServiceTest {
 
     @Mock
     private CaronaRepository caronaRepository;
+    @Mock
+    private ReservaCaronaRepository reservaCaronaRepository;
     @Mock
     private AvaliacaoService avaliacaoService;
     @InjectMocks
@@ -142,6 +151,66 @@ class BuscaCaronaServiceTest {
             assertTrue(resultado.isEmpty());
             verifyNoInteractions(avaliacaoService);
         }
+
+        @Test
+        @DisplayName("Deve incluir carona dentro do raio exato quando as duas coordenadas forem informadas")
+        void deveIncluirCaronaDentroDoRaioExato() {
+            BigDecimal origemLat = new BigDecimal("-7.22000");
+            BigDecimal origemLon = new BigDecimal("-35.91000");
+
+            BuscaCaronaFiltroDTO filtro = new BuscaCaronaFiltroDTO(
+                    origemLat, origemLon, null, null, null, null, 5.0, null);
+
+            carona.setOrigemLatitude(new BigDecimal("-7.22100"));
+            carona.setOrigemLongitude(new BigDecimal("-35.91100"));
+            carona.setDestinoLatitude(new BigDecimal("-7.23000000"));
+            carona.setDestinoLongitude(new BigDecimal("-35.87000000"));
+            carona.setVagasTotais(4);
+
+            when(caronaRepository.findAll(any(Specification.class))).thenReturn(List.of(carona));
+            when(avaliacaoService.buscarReputacoes(anyList())).thenReturn(List.of());
+
+            List<CaronaBuscaResponseDTO> resultado =
+                    buscaCaronaService.buscarCaronasDisponiveis(filtro, usuarioAutenticadoId);
+
+            assertEquals(1, resultado.size());
+        }
+
+        @Test
+        @DisplayName("Não deve filtrar por distância exata quando só uma das coordenadas for informada")
+        void naoDeveFiltrarQuandoApenasUmaCoordenadaInformada() {
+            BuscaCaronaFiltroDTO filtro = new BuscaCaronaFiltroDTO(
+                    new BigDecimal("-7.22"), null, null, null, null, null, null, null);
+
+            carona.setVagasTotais(4);
+            when(caronaRepository.findAll(any(Specification.class))).thenReturn(List.of(carona));
+            when(avaliacaoService.buscarReputacoes(anyList())).thenReturn(List.of());
+
+            List<CaronaBuscaResponseDTO> resultado =
+                    buscaCaronaService.buscarCaronasDisponiveis(filtro, usuarioAutenticadoId);
+
+            assertEquals(1, resultado.size());
+        }
+
+        @Test
+        @DisplayName("Deve mapear carona sem reputação e com gênero do motorista preenchido")
+        void deveMapearCaronaSemReputacaoComGenero() {
+            BuscaCaronaFiltroDTO filtro = new BuscaCaronaFiltroDTO(
+                    null, null, null, null, null, null, null, null);
+
+            carona.setVagasTotais(4);
+            carona.getMotorista().setGenero(com.unicar.enums.Genero.FEMININO);
+
+            when(caronaRepository.findAll(any(Specification.class))).thenReturn(List.of(carona));
+            when(avaliacaoService.buscarReputacoes(List.of(motoristaId))).thenReturn(List.of());
+
+            List<CaronaBuscaResponseDTO> resultado =
+                    buscaCaronaService.buscarCaronasDisponiveis(filtro, usuarioAutenticadoId);
+
+            assertEquals(1, resultado.size());
+            assertEquals("FEMININO", resultado.getFirst().motorista().genero());
+            assertNull(resultado.getFirst().motorista().reputacao());
+        }
     }
 
     @Nested
@@ -164,6 +233,75 @@ class BuscaCaronaServiceTest {
                     buscaCaronaService.buscarProximas(new BigDecimal("-7.22"), new BigDecimal("-35.87"), 150.0)
             );
             verifyNoInteractions(caronaRepository);
+        }
+
+        @Test
+        @DisplayName("Deve lançar exceção quando apenas a longitude não for informada")
+        void deveLancarErroQuandoApenasLongitudeAusente() {
+            assertThrows(RegraDeNegocioException.class, () ->
+                    buscaCaronaService.buscarProximas(new BigDecimal("-7.22"), null, 5.0)
+            );
+            verifyNoInteractions(caronaRepository);
+        }
+
+        @Test
+        @DisplayName("Deve usar raio padrão quando o raio informado for zero ou negativo")
+        void deveUsarRaioPadraoQuandoInformadoForInvalido() {
+            when(caronaRepository.buscarCaronasProximas(any(), any(), anyDouble())).thenReturn(List.of());
+
+            buscaCaronaService.buscarProximas(new BigDecimal("-7.22"), new BigDecimal("-35.91"), -5.0);
+
+            verify(caronaRepository).buscarCaronasProximas(any(), any(), eq(5000.0));
+        }
+
+        @Test
+        @DisplayName("Deve mapear caronas próximas calculando vagas disponíveis")
+        void deveMapearCaronasProximasComVagasDisponiveis() {
+            CaronaRepository.CaronaProximaProjection projecao = mock(CaronaRepository.CaronaProximaProjection.class);
+            when(projecao.getId()).thenReturn(caronaId);
+            when(projecao.getOrigemDescricao()).thenReturn("Bodocongó");
+            when(projecao.getOrigemLatitude()).thenReturn(new BigDecimal("-7.22"));
+            when(projecao.getOrigemLongitude()).thenReturn(new BigDecimal("-35.91"));
+            when(projecao.getDestinoDescricao()).thenReturn("UFCG");
+            when(projecao.getDestinoLatitude()).thenReturn(new BigDecimal("-7.23"));
+            when(projecao.getDestinoLongitude()).thenReturn(new BigDecimal("-35.87"));
+            when(projecao.getDataHoraPartida()).thenReturn(LocalDateTime.now().plusDays(1));
+            when(projecao.getVagasTotais()).thenReturn(4);
+            when(projecao.getStatus()).thenReturn(StatusCarona.CRIADA);
+            when(projecao.getDistanciaKm()).thenReturn(2.345);
+
+            when(caronaRepository.buscarCaronasProximas(any(), any(), anyDouble()))
+                    .thenReturn(List.of(projecao));
+            when(reservaCaronaRepository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA))
+                    .thenReturn(1);
+
+            List<CaronaProximaResponseDTO> resultado = buscaCaronaService.buscarProximas(
+                    new BigDecimal("-7.22"), new BigDecimal("-35.91"), 5.0);
+
+            assertEquals(1, resultado.size());
+            CaronaProximaResponseDTO dto = resultado.getFirst();
+            assertEquals(caronaId, dto.id());
+            assertEquals(3, dto.vagasDisponiveis());
+            assertEquals(new BigDecimal("2.35"), dto.distanciaKm());
+        }
+
+        @Test
+        @DisplayName("Deve excluir caronas próximas sem vagas disponíveis")
+        void deveExcluirCaronasProximasSemVagas() {
+            CaronaRepository.CaronaProximaProjection projecao = mock(CaronaRepository.CaronaProximaProjection.class);
+            when(projecao.getId()).thenReturn(caronaId);
+            when(projecao.getVagasTotais()).thenReturn(2);
+            when(projecao.getDistanciaKm()).thenReturn(1.0);
+
+            when(caronaRepository.buscarCaronasProximas(any(), any(), anyDouble()))
+                    .thenReturn(List.of(projecao));
+            when(reservaCaronaRepository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA))
+                    .thenReturn(2);
+
+            List<CaronaProximaResponseDTO> resultado = buscaCaronaService.buscarProximas(
+                    new BigDecimal("-7.22"), new BigDecimal("-35.91"), 5.0);
+
+            assertTrue(resultado.isEmpty());
         }
     }
 }
