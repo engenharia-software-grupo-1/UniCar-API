@@ -30,8 +30,8 @@ CREATE TABLE reserva_carona (
                        'ACEITA',
                        'RECUSADA',
                        'CANCELADA',
-                       'EXPIRADA',
-                       'FINALIZADA'
+                       'REMOVIDA',
+                       'CONCLUIDA'
                 )
             )
 );
@@ -52,13 +52,13 @@ COMMENT ON COLUMN reserva_carona.quantidade_passageiros IS
 'Quantidade total de passageiros representados pela reserva, incluindo o usuário solicitante.';
 
 COMMENT ON COLUMN reserva_carona.status IS
-'Estado atual da reserva. Valores permitidos: PENDENTE, ACEITA, RECUSADA, CANCELADA, EXPIRADA e FINALIZADA.';
+'Estado atual da reserva. Valores permitidos: PENDENTE, ACEITA, RECUSADA, CANCELADA, REMOVIDA e CONCLUIDA.';
 
 COMMENT ON COLUMN reserva_carona.data_reserva IS
 'Data e hora em que a reserva foi criada.';
 
 COMMENT ON COLUMN reserva_carona.data_expiracao IS
-'Data e hora limite para resposta do motorista. Após esse momento a reserva deve ser marcada automaticamente como EXPIRADA.';
+'Data e hora limite para resposta do motorista. Após esse momento a reserva deve ser marcada automaticamente como REMOVIDA.';
 
 COMMENT ON COLUMN reserva_carona.data_resposta IS
 'Data e hora em que a reserva foi aceita ou recusada pelo motorista.';
