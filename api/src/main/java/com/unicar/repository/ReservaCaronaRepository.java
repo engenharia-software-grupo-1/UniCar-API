@@ -16,6 +16,8 @@ import java.util.Optional;
 public interface ReservaCaronaRepository extends JpaRepository<ReservaCarona, Long> {
     @Query("select coalesce(sum(r.quantidadePassageiros), 0) from ReservaCarona r where r.carona.id = :caronaId and r.status = :status")
     int somarPassageirosPorCaronaEStatus(@Param("caronaId") Long caronaId, @Param("status") StatusReserva status);
+    @Query("select coalesce(sum(r.quantidadePassageiros), 0) from ReservaCarona r where r.carona.id = :caronaId and r.status in :statusList")
+    int somarPassageirosPorCaronaEStatusIn(@Param("caronaId") Long caronaId, @Param("statusList") List<StatusReserva> statusList);
     List<ReservaCarona> findByCaronaIdAndStatusIn(Long caronaId, List<StatusReserva> statusList);
     List<ReservaCarona> findByCaronaIdAndStatus(Long caronaId,StatusReserva status);
     List<ReservaCarona> findByCaronaId(Long caronaId);
