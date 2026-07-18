@@ -3,14 +3,16 @@ package com.unicar.service.carona;
 import com.unicar.domain.Carona;
 import com.unicar.domain.ReservaCarona;
 import com.unicar.domain.Usuario;
+import com.unicar.domain.chat.Chat;
 import com.unicar.dto.carona.*;
-import com.unicar.dto.carona.ReservaStatusResponseDTO;
 import com.unicar.enums.StatusCarona;
 import com.unicar.enums.StatusReserva;
+import com.unicar.enums.TipoNotificacao;
 import com.unicar.exception.*;
 import com.unicar.repository.CaronaRepository;
 import com.unicar.repository.ReservaCaronaRepository;
 import com.unicar.repository.UsuarioRepository;
+import com.unicar.repository.chat.ChatRepository;
 import com.unicar.service.NotificacaoService;
 import com.unicar.util.GeoUtils;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ public class ReservaCaronaService {
     private final ReservaCaronaRepository repository;
     private final CaronaRepository caronaRepository;
     private final UsuarioRepository usuarioRepository;
+    private final ChatRepository chatRepository;
     private final NotificacaoService notificacaoService;
 
     @Value("${unicar.reserva.tolerancia-trajeto-km:3.0}")
@@ -79,55 +82,55 @@ public class ReservaCaronaService {
 
         reserva = repository.save(reserva);
 
+        Chat chat = Chat.builder()
+                .reserva(reserva)
+                .build();
+        chatRepository.save(chat);
 
         notificacaoService.dispararNotificacaoSistemica(
                 carona.getMotorista(),
                 "Nova Solicitação de Reserva 🚗",
                 usuario.getNome() + " solicitou uma reserva na sua carona para " + carona.getDestinoDescricao() + ".",
-                com.unicar.enums.TipoNotificacao.RESERVA
+                TipoNotificacao.RESERVA_CRIADA
         );
 
         return new ReservaResponseDTO(reserva);
     }
 
     @Transactional
-    public void aceitarReserva(Long reservaId, Long motoristaId) {
-        ReservaCarona reserva = buscarReserva(reservaId);
-
-        if (!reserva.getCarona().getMotorista().getId().equals(motoristaId)) {
-            throw new AcessoNegadoException("Você não tem permissão para aceitar reservas nesta carona");
-        }
+    public ReservaStatusResponseDTO aceitar(Long reservaId, Long motoristaId) {
+        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
+        validarMotorista(reserva, motoristaId);
 
         if (reserva.getStatus() != StatusReserva.PENDENTE) {
             throw new EstadoInvalidoException("Apenas reservas PENDENTES podem ser aceitas");
         }
 
-        int vagasOcupadas = repository.somarPassageirosPorCaronaEStatus(reserva.getCarona().getId(), StatusReserva.ACEITA);
-        int vagasDisponiveis = reserva.getCarona().getVagasTotais() - vagasOcupadas;
+        Carona carona = buscarCaronaParaAtualizacao(reserva.getCarona().getId());
+        int vagasOcupadas = repository.somarPassageirosPorCaronaEStatus(carona.getId(), StatusReserva.ACEITA);
+        int vagasDisponiveis = carona.getVagasTotais() - vagasOcupadas;
         if (reserva.getQuantidadePassageiros() > vagasDisponiveis) {
-            throw new RegraDeNegocioException("Não há vagas suficientes para aceitar esta reserva");
+            throw new RegraDeNegocioException("Quantidade de vagas indisponível");
         }
 
         reserva.setStatus(StatusReserva.ACEITA);
         reserva.setDataResposta(LocalDateTime.now());
-        repository.save(reserva);
-
+        reserva = repository.save(reserva);
 
         notificacaoService.dispararNotificacaoSistemica(
                 reserva.getUsuario(),
                 "Reserva Aceita! 🎉",
                 "Sua reserva para a carona com destino a " + reserva.getCarona().getDestinoDescricao() + " foi aceita pelo motorista.",
-                com.unicar.enums.TipoNotificacao.RESERVA // 👈 Ajustado aqui
+                TipoNotificacao.RESERVA_ACEITA
         );
+
+        return new ReservaStatusResponseDTO(reserva);
     }
 
     @Transactional
-    public void recusarReserva(Long reservaId, Long motoristaId) {
-        ReservaCarona reserva = buscarReserva(reservaId);
-
-        if (!reserva.getCarona().getMotorista().getId().equals(motoristaId)) {
-            throw new AcessoNegadoException("Você não tem permissão para recusar reservas nesta carona");
-        }
+    public ReservaStatusResponseDTO recusar(Long reservaId, Long motoristaId) {
+        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
+        validarMotorista(reserva, motoristaId);
 
         if (reserva.getStatus() != StatusReserva.PENDENTE) {
             throw new EstadoInvalidoException("Apenas reservas PENDENTES podem ser recusadas");
@@ -135,24 +138,22 @@ public class ReservaCaronaService {
 
         reserva.setStatus(StatusReserva.RECUSADA);
         reserva.setDataResposta(LocalDateTime.now());
-        repository.save(reserva);
-
+        reserva = repository.save(reserva);
 
         notificacaoService.dispararNotificacaoSistemica(
                 reserva.getUsuario(),
                 "Reserva Recusada 😔",
                 "Sua solicitação de reserva para a carona de " + reserva.getCarona().getDestinoDescricao() + " foi recusada pelo motorista.",
-                com.unicar.enums.TipoNotificacao.RESERVA // 👈 Ajustado aqui
+                TipoNotificacao.RESERVA_RECUSADA
         );
+
+        return new ReservaStatusResponseDTO(reserva);
     }
 
     @Transactional
     public void removerPassageiro(Long reservaId, Long motoristaId) {
-        ReservaCarona reserva = buscarReserva(reservaId);
-
-        if (!reserva.getCarona().getMotorista().getId().equals(motoristaId)) {
-            throw new AcessoNegadoException("Você não tem permissão para remover passageiros desta carona");
-        }
+        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
+        validarMotorista(reserva, motoristaId);
 
         if (reserva.getStatus() != StatusReserva.ACEITA) {
             throw new EstadoInvalidoException("Apenas reservas já ACEITAS podem ser canceladas por remoção de passageiro");
@@ -162,16 +163,80 @@ public class ReservaCaronaService {
         reserva.setDataResposta(LocalDateTime.now());
         repository.save(reserva);
 
-
         notificacaoService.dispararNotificacaoSistemica(
                 reserva.getUsuario(),
                 "Remoção de Passageiro ⚠️",
                 "Você foi removido da lista de passageiros da carona para " + reserva.getCarona().getDestinoDescricao() + ".",
-                com.unicar.enums.TipoNotificacao.RESERVA // 👈 Ajustado aqui
+                TipoNotificacao.RESERVA_CANCELADA
         );
     }
 
-    // O restante do código permanece o mesmo...
+    @Transactional
+    public ReservaStatusResponseDTO cancelar(Long reservaId, Long usuarioId) {
+        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
+
+        boolean isPassageiro = reserva.getUsuario().getId().equals(usuarioId);
+        boolean isMotorista = reserva.getCarona().getMotorista().getId().equals(usuarioId);
+        if (!isPassageiro && !isMotorista) {
+            throw new AcessoNegadoException("Usuário não tem permissão para cancelar esta reserva");
+        }
+
+        StatusReserva status = reserva.getStatus();
+        if (status == StatusReserva.CONCLUIDA) {
+            throw new EstadoInvalidoException("Não é possível cancelar uma reserva finalizada");
+        }
+
+        boolean podeCancelar = isPassageiro
+                ? (status == StatusReserva.PENDENTE || status == StatusReserva.ACEITA)
+                : status == StatusReserva.ACEITA;
+
+        if (!podeCancelar) {
+            throw new EstadoInvalidoException("Não é possível cancelar uma reserva com status " + status);
+        }
+
+        reserva.setStatus(StatusReserva.CANCELADA);
+        reserva.setDataResposta(LocalDateTime.now());
+        reserva = repository.save(reserva);
+
+        if (isPassageiro) {
+            notificacaoService.dispararNotificacaoSistemica(
+                    reserva.getCarona().getMotorista(),
+                    "Reserva Cancelada pelo Passageiro 😟",
+                    reserva.getUsuario().getNome() + " cancelou a reserva na sua carona para " + reserva.getCarona().getDestinoDescricao() + ".",
+                    TipoNotificacao.RESERVA_CANCELADA
+            );
+        } else {
+            notificacaoService.dispararNotificacaoSistemica(
+                    reserva.getUsuario(),
+                    "Reserva Cancelada pelo Motorista ⚠️",
+                    "O motorista cancelou a sua vaga na carona para " + reserva.getCarona().getDestinoDescricao() + ".",
+                    TipoNotificacao.RESERVA_CANCELADA
+            );
+        }
+
+        return new ReservaStatusResponseDTO(reserva);
+    }
+
+    @Transactional
+    public void removerReserva(Long reservaId, Long usuarioId) {
+        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
+        validarDono(reserva, usuarioId);
+
+        if (reserva.getStatus() != StatusReserva.PENDENTE && reserva.getStatus() != StatusReserva.ACEITA) {
+            throw new EstadoInvalidoException("Não é possível remover uma reserva com status " + reserva.getStatus());
+        }
+
+        reserva.setStatus(StatusReserva.CANCELADA);
+        repository.save(reserva);
+
+        notificacaoService.dispararNotificacaoSistemica(
+                reserva.getCarona().getMotorista(),
+                "Reserva Cancelada pelo Passageiro 😟",
+                reserva.getUsuario().getNome() + " cancelou a reserva na sua carona para " + reserva.getCarona().getDestinoDescricao() + ".",
+                TipoNotificacao.RESERVA_CANCELADA
+        );
+    }
+
     public ReservaSimulacaoResponseDTO simular(ReservaRequestDTO request) {
         Carona carona = buscarCarona(request.caronaId());
         BigDecimal valorContribuicao = calcularValorContribuicao(
@@ -203,88 +268,6 @@ public class ReservaCaronaService {
         return new ReservaDetalheResponseDTO(reserva);
     }
 
-    @Transactional
-    public ReservaStatusResponseDTO aceitar(Long reservaId, Long motoristaId) {
-        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
-        validarMotorista(reserva, motoristaId);
-
-        if (reserva.getStatus() != StatusReserva.PENDENTE) {
-            throw new EstadoInvalidoException("Apenas reservas PENDENTES podem ser aceitas");
-        }
-
-        Carona carona = buscarCaronaParaAtualizacao(reserva.getCarona().getId());
-        int vagasOcupadas = repository.somarPassageirosPorCaronaEStatus(carona.getId(), StatusReserva.ACEITA);
-        int vagasDisponiveis = carona.getVagasTotais() - vagasOcupadas;
-        if (reserva.getQuantidadePassageiros() > vagasDisponiveis) {
-            throw new RegraDeNegocioException("Quantidade de vagas indisponível");
-        }
-
-        reserva.setStatus(StatusReserva.ACEITA);
-        reserva.setDataResposta(LocalDateTime.now());
-        reserva = repository.save(reserva);
-
-        return new ReservaStatusResponseDTO(reserva);
-    }
-
-    @Transactional
-    public ReservaStatusResponseDTO recusar(Long reservaId, Long motoristaId) {
-        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
-        validarMotorista(reserva, motoristaId);
-
-        if (reserva.getStatus() != StatusReserva.PENDENTE) {
-            throw new EstadoInvalidoException("Apenas reservas PENDENTES podem ser recusadas");
-        }
-
-        reserva.setStatus(StatusReserva.RECUSADA);
-        reserva.setDataResposta(LocalDateTime.now());
-        reserva = repository.save(reserva);
-
-        return new ReservaStatusResponseDTO(reserva);
-    }
-
-    @Transactional
-    public ReservaStatusResponseDTO cancelar(Long reservaId, Long usuarioId) {
-        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
-
-        boolean isPassageiro = reserva.getUsuario().getId().equals(usuarioId);
-        boolean isMotorista = reserva.getCarona().getMotorista().getId().equals(usuarioId);
-        if (!isPassageiro && !isMotorista) {
-            throw new AcessoNegadoException("Usuário não tem permissão para cancelar esta reserva");
-        }
-
-        StatusReserva status = reserva.getStatus();
-        if (status == StatusReserva.CONCLUIDA) {
-            throw new EstadoInvalidoException("Não é possível cancelar uma reserva finalizada");
-        }
-
-        boolean podeCancelar = isPassageiro
-                ? (status == StatusReserva.PENDENTE || status == StatusReserva.ACEITA)
-                : status == StatusReserva.ACEITA;
-
-        if (!podeCancelar) {
-            throw new EstadoInvalidoException("Não é possível cancelar uma reserva com status " + status);
-        }
-
-        reserva.setStatus(StatusReserva.CANCELADA);
-        reserva.setDataResposta(LocalDateTime.now());
-        reserva = repository.save(reserva);
-
-        return new ReservaStatusResponseDTO(reserva);
-    }
-
-    @Transactional
-    public void removerReserva(Long reservaId, Long usuarioId) {
-        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
-        validarDono(reserva, usuarioId);
-
-        if (reserva.getStatus() != StatusReserva.PENDENTE && reserva.getStatus() != StatusReserva.ACEITA) {
-            throw new EstadoInvalidoException("Não é possível remover uma reserva com status " + reserva.getStatus());
-        }
-
-        reserva.setStatus(StatusReserva.CANCELADA);
-        repository.save(reserva);
-    }
-
     public ReservaCarona buscarReserva(Long reservaId) {
         return repository.findById(reservaId).orElseThrow(() -> new ReservaNaoEncontradaException("Reserva não encontrada: id=" + reservaId));
     }
@@ -306,7 +289,7 @@ public class ReservaCaronaService {
         }
     }
 
-    private BigDecimal calcularValorContribuicao(Carona carona, EnderecoDTO origemEmbarque, Integer quantidadePassageiros) {
+    private BigDecimal calcularValorContribuicao(Carona carona, EnderecoDTO origenEmbarque, Integer quantidadePassageiros) {
         BigDecimal distanciaTotal = GeoUtils.calcularDistanciaKm(
                 carona.getOrigemLatitude(), carona.getOrigemLongitude(),
                 carona.getDestinoLatitude(), carona.getDestinoLongitude());
@@ -317,10 +300,10 @@ public class ReservaCaronaService {
 
         BigDecimal distanciaOrigemEmbarque = GeoUtils.calcularDistanciaKm(
                 carona.getOrigemLatitude(), carona.getOrigemLongitude(),
-                origemEmbarque.latitude(), origemEmbarque.longitude());
+                origenEmbarque.latitude(), origenEmbarque.longitude());
 
         BigDecimal distanciaEmbarqueDestino = GeoUtils.calcularDistanciaKm(
-                origemEmbarque.latitude(), origemEmbarque.longitude(),
+                origenEmbarque.latitude(), origenEmbarque.longitude(),
                 carona.getDestinoLatitude(), carona.getDestinoLongitude());
 
         BigDecimal desvioTrajeto = distanciaOrigemEmbarque.add(distanciaEmbarqueDestino).subtract(distanciaTotal);
