@@ -109,20 +109,69 @@ check ConclusaoHabilitaAvaliacaoBilateral for 5 but 8 Int
 check CaronaCanceladaSemReservasAtivas for 5 but 8 Int
 check CaronaFinalizadaSemReservasAceitas for 5 but 8 Int
 
-pred cenarioIntegrado {
+pred exemploCaronaFinalizada {
     some disj m, p: Usuario |
         some c: Carona |
-            c.motorista = m
-            and c.status = CaronaFinalizada
-            and (some r: Reserva |
-                r.carona = c
-                and r.passageiro = p
-                and r.status = ReservaConcluida)
-            and (some a: Avaliacao |
-                a.carona = c
-                and a.avaliador = m
-                and a.avaliado = p)
-            and (some i: InteresseTrajeto | i.usuario = p)
+            some r: Reserva |
+                some a: Avaliacao |
+                    some i: InteresseTrajeto {
+
+                        m.ativo = True
+                        p.ativo = True
+                        not bloqueioEntre[m, p]
+
+                        c.motorista = m
+                        c.status = CaronaFinalizada
+
+                        r.carona = c
+                        r.passageiro = p
+                        r.status = ReservaConcluida
+
+                        a.carona = c
+                        a.avaliador = m
+                        a.avaliado = p
+
+                        i.usuario = p
+                    }
 }
 
-run cenarioIntegrado for 2 but 8 Int
+run exemploCaronaFinalizada for 2 but
+    8 Int,
+    exactly 2 Usuario,
+    exactly 1 Veiculo,
+    exactly 1 Carona,
+    exactly 1 Reserva,
+    exactly 1 Avaliacao,
+    exactly 1 InteresseTrajeto
+
+pred fluxoCaronaEmAndamento {
+    some disj m, p: Usuario |
+        some c: Carona |
+            some v: Veiculo |
+                some r: Reserva {
+
+                    m.ativo = True
+                    p.ativo = True
+                    not bloqueioEntre[m, p]
+
+                    c.motorista = m
+                    c.veiculo = v
+                    v.dono = m
+                    c.status = CaronaEmAndamento
+
+                    r.carona = c
+                    r.passageiro = p
+                    r.status = ReservaAceita
+
+                    no a: Avaliacao | a.carona = c
+                }
+}
+
+run fluxoCaronaEmAndamento for 2 but
+    8 Int,
+    exactly 2 Usuario,
+    exactly 1 Veiculo,
+    exactly 1 Carona,
+    exactly 1 Reserva,
+    exactly 0 Avaliacao,
+    exactly 0 InteresseTrajeto
