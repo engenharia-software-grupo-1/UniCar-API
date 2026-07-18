@@ -30,7 +30,7 @@ public class HistoricoService {
     public Page<HistoricoMotoristaResponseDTO> listarHistoricoComoMotorista(Long usuarioId, Pageable pageable) {
         Page<Carona> caronas = caronaRepository.findHistoricoComoMotorista(usuarioId, pageable);
         return caronas.map(carona -> {
-            int totalPassageiros = reservaCaronaRepository.countByCarona_IdAndStatus(carona.getId(), StatusReserva.ACEITA);
+            int totalPassageiros = reservaCaronaRepository.somarPassageirosPorCaronaEStatus(carona.getId(), StatusReserva.ACEITA);
 
             return new HistoricoMotoristaResponseDTO(
                     carona.getId(),
@@ -48,7 +48,7 @@ public class HistoricoService {
         Page<ReservaCarona> reservas = reservaCaronaRepository.findHistoricoComoPassageiro(usuarioId, pageable);
         return reservas.map(reserva -> {
             Carona carona = reserva.getCarona();
-            int quantPassageiros = reservaCaronaRepository.countByCarona_IdAndStatus(carona.getId(), StatusReserva.ACEITA);
+            int quantPassageiros = reservaCaronaRepository.somarPassageirosPorCaronaEStatus(carona.getId(), StatusReserva.ACEITA);
 
             return new HistoricoPassageiroResponseDTO(
                     reserva.getId(),

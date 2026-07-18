@@ -101,7 +101,7 @@ public class ReservaCaronaService {
             throw new EstadoInvalidoException("Apenas reservas PENDENTES podem ser aceitas");
         }
 
-        int vagasOcupadas = repository.somarPassageirosPorCaronaEStatus(carona.getId(), StatusReserva.ACEITA);
+        int vagasOcupadas = repository.somarPassageirosPorCaronaEStatus(reserva.getCarona().getId(), StatusReserva.ACEITA);
         int vagasDisponiveis = reserva.getCarona().getVagasTotais() - vagasOcupadas;
         if (reserva.getQuantidadePassageiros() > vagasDisponiveis) {
             throw new RegraDeNegocioException("Não há vagas suficientes para aceitar esta reserva");
