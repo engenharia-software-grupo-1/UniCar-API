@@ -479,7 +479,7 @@ components:
 
     VeiculoRequest:
       type: object
-      required: [modelo, placa]
+      required: [modelo, placa, tipoVeiculo]
       properties:
         modelo:
           type: string
@@ -493,7 +493,7 @@ components:
         tipoVeiculo:
           type: string
           example: CARRO
-          enum: CARRO, MOTO
+          enum: [CARRO, MOTO]
 
     Veiculo:
       type: object
