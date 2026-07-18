@@ -86,15 +86,14 @@ assert BloqueioCortaMensagem {
         implies not podeEnviarMensagem[ch, u]
 }
 
-// Indireta: toda notificação vinculada a reserva alcança uma das partes.
 assert NotificacaoDeReservaSomenteParaParticipante {
     all n: Notificacao |
         notificacaoDeReservaValida[n] and some n.origemReserva implies
         n.destinatario in n.origemReserva.passageiro + n.origemReserva.carona.motorista
 }
 
-check IntrusoNaoEnviaMensagem for 5
-check IntrusoNaoConsultaChat for 5
-check BloqueioCortaMensagem for 5
-check NotificacaoDeReservaSomenteParaParticipante for 5
-run { some ch: Chat | some ch.mensagens } for 4
+check IntrusoNaoEnviaMensagem for 5 but 8 Int
+check IntrusoNaoConsultaChat for 5 but 8 Int
+check BloqueioCortaMensagem for 5 but 8 Int
+check NotificacaoDeReservaSomenteParaParticipante for 5 but 8 Int
+run { some ch: Chat | some ch.mensagens } for 4 but 8 Int

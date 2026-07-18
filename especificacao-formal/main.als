@@ -8,18 +8,17 @@ open modules/avaliacao
 open modules/interesse_trajeto
 open modules/comunicacao
 
-// O modelo contém somente os domínios ainda pertencentes ao projeto.
+// Integra os módulos do domínio e verifica propriedades que atravessam
+// mais de um agregado. Detalhes de transporte HTTP não fazem parte do modelo.
 
 fact ConsistenciaGlobal {
     all c: Carona | c.veiculo.dono = c.motorista
     all r: Reserva | r.passageiro != r.carona.motorista
     all a: Avaliacao | participante[a.carona, a.avaliador]
                          and participante[a.carona, a.avaliado]
-    // Chat é privado e 1:1 com a reserva, como definido na migration V5.
     all ch: Chat | participantes[ch] = ch.reserva.passageiro + ch.reserva.carona.motorista
 }
 
-// Conjuntos globais úteis para análise do ecossistema.
 fun viagensEmCurso: set Carona { { c: Carona | c.status = CaronaEmAndamento } }
 fun viagensEncerradas: set Carona {
     { c: Carona | c.status in CaronaFinalizada + CaronaCancelada }
@@ -67,7 +66,6 @@ assert AvaliacaoSomenteAposFinalizacao {
     all a: Avaliacao | a.carona.status = CaronaFinalizada
 }
 
-// Direta: resultados da busca respeitam estado, vagas, autoria e bloqueios.
 assert BuscaSegura {
     all u: Usuario, c: Carona |
         podeBuscarCarona[u, c] implies {
@@ -78,13 +76,11 @@ assert BuscaSegura {
         }
 }
 
-// Indireta: um veículo usado por viagem ativa não pode ser excluído.
 assert VeiculoDeCaronaAtivaNaoEhExcluivel {
     all c: caronasAtivas |
         not podeExcluirVeiculo[c.motorista, c.veiculo]
 }
 
-// Indireta: finalizar a carona torna reservas concluídas elegíveis para avaliação.
 assert ConclusaoHabilitaAvaliacaoBilateral {
     all c: Carona, r: Reserva |
         c.status = CaronaFinalizada
@@ -104,14 +100,14 @@ assert CaronaFinalizadaSemReservasAceitas {
     all c: Carona | c.status = CaronaFinalizada implies finalizacaoConsistente[c]
 }
 
-check MotoristaNaoReservaPropriaCarona for 5
-check BloqueioImpedeComunicacao for 5
-check AvaliacaoSomenteAposFinalizacao for 5
-check BuscaSegura for 5 but 6 Int
-check VeiculoDeCaronaAtivaNaoEhExcluivel for 5
-check ConclusaoHabilitaAvaliacaoBilateral for 5
-check CaronaCanceladaSemReservasAtivas for 5
-check CaronaFinalizadaSemReservasAceitas for 5
+check MotoristaNaoReservaPropriaCarona for 5 but 8 Int
+check BloqueioImpedeComunicacao for 5 but 8 Int
+check AvaliacaoSomenteAposFinalizacao for 5 but 8 Int
+check BuscaSegura for 5 but 8 Int
+check VeiculoDeCaronaAtivaNaoEhExcluivel for 5 but 8 Int
+check ConclusaoHabilitaAvaliacaoBilateral for 5 but 8 Int
+check CaronaCanceladaSemReservasAtivas for 5 but 8 Int
+check CaronaFinalizadaSemReservasAceitas for 5 but 8 Int
 
 pred cenarioIntegrado {
     some disj m, p: Usuario |
@@ -129,4 +125,4 @@ pred cenarioIntegrado {
             and (some i: InteresseTrajeto | i.usuario = p)
 }
 
-run cenarioIntegrado for 5 but 6 Int
+run cenarioIntegrado for 2 but 8 Int

@@ -4,8 +4,6 @@ open modules/usuario
 open modules/carona
 
 abstract sig StatusReserva {}
-// Nomes do enum efetivamente usado pelo Spring Boot. A migration/OpenAPI ainda
-// usam EXPIRADA/FINALIZADA e precisam ser sincronizados em uma mudança própria.
 one sig ReservaPendente, ReservaAceita, ReservaRecusada, ReservaCancelada,
         ReservaRemovida, ReservaConcluida extends StatusReserva {}
 
@@ -14,7 +12,7 @@ sig Reserva {
     passageiro: one Usuario,
     quantidadePassageiros: one Int,
     origemEmbarque: one Ponto,
-    valorContribuicao: one Int,
+    valorContribuicao: one ValorMonetario,
     status: one StatusReserva
 }
 
@@ -22,9 +20,9 @@ fact IntegridadeReserva {
     all r: Reserva | {
         r.passageiro != r.carona.motorista
         r.quantidadePassageiros > 0
-        r.valorContribuicao >= 0
     }
-    // A migration possui UNIQUE(carona_id, usuario_id), independentemente do status.
+    // Uma pessoa não pode criar nova reserva para a mesma carona,
+    // mesmo após a reserva anterior alcançar um estado terminal.
     all disj r1, r2: Reserva |
         r1.carona != r2.carona or r1.passageiro != r2.passageiro
     all c: Carona | vagasOcupadas[c] <= c.vagasTotais
@@ -117,9 +115,16 @@ pred podeCancelarReserva[r: Reserva, u: Usuario] {
     (u = r.carona.motorista and r.status = ReservaAceita)
 }
 
+// No endpoint de remoção, uma reserva aceita passa a CANCELADA.
+// REMOVIDA permanece no enum por ser um estado exposto pelo contrato.
 pred podeRemoverReserva[r: Reserva, m: Usuario] {
     r.carona.motorista = m
-    r.status in ReservaPendente + ReservaAceita
+    r.status = ReservaAceita
+}
+
+pred remocaoReservaPermitida[antes, depois: StatusReserva] {
+    antes = ReservaAceita
+    depois = ReservaCancelada
 }
 
 assert LotacaoRespeitada {
@@ -131,19 +136,27 @@ assert TerceiroNaoCancelaReserva {
         podeCancelarReserva[r, u] implies u in r.passageiro + r.carona.motorista
 }
 
-// Direta: todos os estados terminais são absorventes.
+assert SomenteReservaAceitaPodeSerRemovida {
+    all r: Reserva, m: Usuario |
+        podeRemoverReserva[r, m] implies r.status = ReservaAceita
+}
+
+assert RemocaoResultaEmCancelamento {
+    all antes, depois: StatusReserva |
+        remocaoReservaPermitida[antes, depois] implies
+        antes = ReservaAceita and depois = ReservaCancelada
+}
+
 assert EstadoTerminalNaoTransiciona {
     all s: ReservaRecusada + ReservaCancelada + ReservaRemovida + ReservaConcluida |
         no proximosStatus[s]
 }
 
-// Indireta: bloqueio impede a criação mesmo quando há vagas.
 assert BloqueadoNaoSolicitaReserva {
     all c: Carona, u: Usuario, qtd: Int |
         bloqueioEntre[u, c.motorista] implies not podeSolicitarReserva[c, u, qtd]
 }
 
-// Indireta: aceitação preserva o limite agregado de assentos.
 assert AceitacaoNaoExcedeVagas {
     all r: Reserva, m: Usuario |
         podeAceitarReserva[r, m] implies
@@ -155,10 +168,12 @@ assert ApenasParticipantesConsultamReserva {
         podeConsultarReserva[r, u] implies u in r.passageiro + r.carona.motorista
 }
 
-check LotacaoRespeitada for 5 but 6 Int
-check TerceiroNaoCancelaReserva for 5
-check EstadoTerminalNaoTransiciona for 5
-check BloqueadoNaoSolicitaReserva for 5 but 6 Int
-check AceitacaoNaoExcedeVagas for 5 but 6 Int
-check ApenasParticipantesConsultamReserva for 5
-run { some r: Reserva | r.status = ReservaAceita } for 4 but 6 Int
+check LotacaoRespeitada for 5 but 8 Int
+check TerceiroNaoCancelaReserva for 5 but 8 Int
+check SomenteReservaAceitaPodeSerRemovida for 5 but 8 Int
+check RemocaoResultaEmCancelamento for 5 but 8 Int
+check EstadoTerminalNaoTransiciona for 5 but 8 Int
+check BloqueadoNaoSolicitaReserva for 5 but 8 Int
+check AceitacaoNaoExcedeVagas for 5 but 8 Int
+check ApenasParticipantesConsultamReserva for 5 but 8 Int
+run { some r: Reserva | r.status = ReservaAceita } for 4 but 8 Int

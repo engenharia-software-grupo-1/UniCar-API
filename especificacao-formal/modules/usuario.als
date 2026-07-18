@@ -3,7 +3,7 @@ module modules/usuario
 sig Matricula, CPF, Email, SessaoToken {}
 
 abstract sig Genero {}
-one sig Masculino, Feminino, OutroGenero, NaoInformado extends Genero {}
+one sig Masculino, Feminino, NaoInformado extends Genero {}
 
 abstract sig Bool {}
 one sig True, False extends Bool {}
@@ -87,17 +87,14 @@ assert BloqueioUnicoPorPar {
         b1.bloqueador != b2.bloqueador or b1.bloqueado != b2.bloqueado
 }
 
-// Direta: consequência imediata de IntegridadeUsuario.
 assert UsuarioInativoSemToken {
     all u: Usuario | u.ativo = False implies no u.sessoes
 }
 
-// Indireta: combina revogação, sessões e autenticação.
 assert TokenRevogadoNuncaAutentica {
     all u: Usuario, t: tokensRevogados | not podeAutenticar[u, t]
 }
 
-// Indireta: bloqueio em qualquer direção corta a consulta pública.
 assert BloqueioBidirecionalProtegePerfil {
     all disj u1, u2: Usuario |
         bloqueioEntre[u1, u2] implies not podeConsultarPerfilPublico[u1, u2]

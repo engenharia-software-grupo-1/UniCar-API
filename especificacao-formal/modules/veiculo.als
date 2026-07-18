@@ -43,7 +43,6 @@ assert ApenasDonoAlteraVeiculo {
     all u: Usuario, v: Veiculo | podeAlterarVeiculo[u, v] implies v.dono = u
 }
 
-// Indireta: isolamento entre os catálogos privados de dois proprietários.
 assert VeiculoNaoPossuiDoisDonos {
     all disj u1, u2: Usuario | no veiculosDe[u1] & veiculosDe[u2]
 }

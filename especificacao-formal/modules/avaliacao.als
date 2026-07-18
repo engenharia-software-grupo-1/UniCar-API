@@ -81,7 +81,6 @@ assert AvaliacaoUnicaPorParECarona {
         a1.carona != a2.carona or a1.avaliador != a2.avaliador or a1.avaliado != a2.avaliado
 }
 
-// Indireta: todo alvo pendente é participante legítimo e ainda não foi avaliado.
 assert PendenciaEhElegivel {
     all c: Carona, u: Usuario, alvo: pendentesPara[c, u] | {
         participante[c, alvo]
@@ -96,9 +95,9 @@ assert NaoParticipanteNuncaAvalia {
         not participante[c, autor] implies not podeAvaliar[c, autor, alvo, n]
 }
 
-check NotaSempreValida for 5 but 6 Int
-check PassageirosNaoSeAvaliam for 5
-check AvaliacaoUnicaPorParECarona for 5
-check PendenciaEhElegivel for 5
-check NaoParticipanteNuncaAvalia for 5 but 6 Int
-run { some Avaliacao } for 4 but 6 Int
+check NotaSempreValida for 5 but 8 Int
+check PassageirosNaoSeAvaliam for 5 but 8 Int
+check AvaliacaoUnicaPorParECarona for 5 but 8 Int
+check PendenciaEhElegivel for 5 but 8 Int
+check NaoParticipanteNuncaAvalia for 5 but 8 Int
+run { some Avaliacao } for 4 but 8 Int

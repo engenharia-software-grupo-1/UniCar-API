@@ -43,14 +43,13 @@ assert ApenasDonoRemoveInteresse {
         podeRemoverInteresse[u, i] implies i in interessesDe[u]
 }
 
-// Indireta: a consulta inversa e a consulta por proprietário são consistentes.
 assert ConsultaDeInteresseConsistente {
     all i: InteresseTrajeto |
         i.usuario in usuariosInteressados[i.origem, i.destino]
         and i in interessesDe[i.usuario]
 }
 
-check InteresseDuplicadoImpossivel for 5
-check ApenasDonoRemoveInteresse for 5
-check ConsultaDeInteresseConsistente for 5
-run { some InteresseTrajeto } for 4
+check InteresseDuplicadoImpossivel for 5 but 8 Int
+check ApenasDonoRemoveInteresse for 5 but 8 Int
+check ConsultaDeInteresseConsistente for 5 but 8 Int
+run { some InteresseTrajeto } for 4 but 8 Int
