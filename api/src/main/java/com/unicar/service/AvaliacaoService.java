@@ -3,8 +3,9 @@ package com.unicar.service;
 import com.unicar.domain.Avaliacao;
 import com.unicar.domain.Carona;
 import com.unicar.domain.Usuario;
-import com.unicar.dto.avaliacao.AvaliacaoRequestDTO;
 import com.unicar.dto.avaliacao.AvaliacaoRecebidaDTO;
+import com.unicar.dto.avaliacao.AvaliacaoRequestDTO;
+import com.unicar.dto.avaliacao.ParticipantePendenteDTO;
 import com.unicar.dto.avaliacao.ReputacaoDTO;
 import com.unicar.enums.StatusCarona;
 import com.unicar.exception.CaronaNaoEncontradaException;
@@ -116,6 +117,55 @@ public class AvaliacaoService {
                     return new ReputacaoDTO(id, media, quantidade);
                 })
                 .toList();
+    }
+
+    /**
+     * Lista os participantes de uma carona finalizada que o usuário autenticado ainda não avaliou.
+     */
+    public List<ParticipantePendenteDTO> listarAvaliacoesPendentes(Long caronaId, Long usuarioAutenticadoId) {
+        Carona carona = buscarCarona(caronaId);
+        validarCaronaFinalizada(carona);
+
+        // Reutiliza seu método de validação para garantir segurança na consulta
+        Usuario usuarioLogado = buscarUsuario(usuarioAutenticadoId);
+
+        java.util.List<ParticipantePendenteDTO> pendentes = new java.util.ArrayList<>();
+
+        boolean ehMotorista = carona.getMotorista().getId().equals(usuarioAutenticadoId);
+
+        if (!ehMotorista) {
+            // Se eu sou PASSAGEIRO, posso avaliar o MOTORISTA caso ainda não o tenha feito
+            boolean jaAvaliouMotorista = avaliacaoRepository.existsByCaronaIdAndAvaliadorIdAndAvaliadoId(
+                    caronaId, usuarioAutenticadoId, carona.getMotorista().getId()
+            );
+            if (!jaAvaliouMotorista) {
+                pendentes.add(new ParticipantePendenteDTO(
+                        carona.getMotorista().getId(),
+                        carona.getMotorista().getNome(),
+                        "MOTORISTA"
+                ));
+            }
+        } else {
+            // Se eu sou MOTORISTA, preciso buscar todos os passageiros confirmados desta carona
+            // Nota: use o método adequado do seu reservaCaronaRepository que traga os passageiros aceitos
+            List<com.unicar.domain.ReservaCarona> reservas = reservaCaronaRepository.findByCaronaId(caronaId);
+
+            for (com.unicar.domain.ReservaCarona reserva : reservas) {
+                Long passageiroId = reserva.getUsuario().getId();
+                boolean jaAvaliouPassageiro = avaliacaoRepository.existsByCaronaIdAndAvaliadorIdAndAvaliadoId(
+                        caronaId, usuarioAutenticadoId, passageiroId
+                );
+                if (!jaAvaliouPassageiro) {
+                    pendentes.add(new ParticipantePendenteDTO(
+                            passageiroId,
+                            reserva.getUsuario().getNome(),
+                            "PASSAGEIRO"
+                    ));
+                }
+            }
+        }
+
+        return pendentes;
     }
 
     private Usuario buscarUsuario(Long id) {
