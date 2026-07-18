@@ -12,6 +12,7 @@ import com.unicar.exception.*;
 import com.unicar.repository.*;
 import com.unicar.service.NotificacaoService;
 import com.unicar.util.GeoUtils;
+import com.unicar.util.notificacoes.NotificacaoTemplates;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -110,8 +111,8 @@ public class CaronaService {
                 usuariosInteressados.forEach(usuario -> {
                     notificacaoService.dispararNotificacaoSistemica(
                             usuario,
-                            "Carona de seu Interesse Criada! 📍",
-                            "Uma nova carona com destino a " + carona.getDestinoDescricao() + " acabou de ser cadastrada.",
+                            "Carona de seu Interesse Criada",
+                            NotificacaoTemplates.novaCaronaDisponivel(carona),
                             TipoNotificacao.INTERESSE_TRAJETO
                     );
                 });
@@ -244,8 +245,8 @@ public class CaronaService {
 
             notificacaoService.dispararNotificacaoSistemica(
                     reserva.getUsuario(),
-                    "Carona Cancelada ⚠️",
-                    "A carona oferecida por " + carona.getMotorista().getNome() + " com destino a " + carona.getDestinoDescricao() + " foi cancelada.",
+                    "Carona Cancelada",
+                    NotificacaoTemplates.caronaCancelada(carona),
                     TipoNotificacao.CARONA_CANCELADA
             );
         });
@@ -290,8 +291,8 @@ public class CaronaService {
         reservas.forEach(r -> {
             notificacaoService.dispararNotificacaoSistemica(
                     r.getUsuario(),
-                    "Carona Iniciada! 🛣️",
-                    "O motorista iniciou a viagem com destino a " + carona.getDestinoDescricao() + ". Boa viagem!",
+                    "Carona Iniciada",
+                    NotificacaoTemplates.caronaIniciada(carona),
                     TipoNotificacao.CARONA_INICIADA
             );
         });
@@ -316,15 +317,15 @@ public class CaronaService {
 
             notificacaoService.dispararNotificacaoSistemica(
                     r.getUsuario(),
-                    "Carona Finalizada 🏁",
-                    "Você chegou ao destino de sua carona para " + carona.getDestinoDescricao() + ".",
+                    "Carona Finalizada",
+                    NotificacaoTemplates.caronaFinalizada(carona),
                     TipoNotificacao.CARONA_FINALIZADA
             );
 
             notificacaoService.dispararNotificacaoSistemica(
                     r.getUsuario(),
-                    "Avalie sua Viagem ⭐",
-                    "Que tal avaliar sua experiência na carona com o motorista " + carona.getMotorista().getNome() + "?",
+                    "Avalie sua Viagem",
+                    NotificacaoTemplates.solicitarAvaliacaoPassageiro(carona),
                     TipoNotificacao.NOTIFICACAO_AVALIACAO
             );
         });
@@ -334,8 +335,8 @@ public class CaronaService {
         if (!reservas.isEmpty()) {
             notificacaoService.dispararNotificacaoSistemica(
                     carona.getMotorista(),
-                    "Avalie seus Passageiros ⭐",
-                    "Sua carona foi finalizada com sucesso. Deixe sua avaliação para seus passageiros.",
+                    "Avalie seus Passageiros",
+                    NotificacaoTemplates.solicitarAvaliacaoMotorista(),
                     TipoNotificacao.NOTIFICACAO_AVALIACAO
             );
         }

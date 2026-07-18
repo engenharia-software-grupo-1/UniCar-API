@@ -15,6 +15,7 @@ import com.unicar.repository.UsuarioRepository;
 import com.unicar.repository.chat.ChatRepository;
 import com.unicar.service.NotificacaoService;
 import com.unicar.util.GeoUtils;
+import com.unicar.util.notificacoes.NotificacaoTemplates;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -89,8 +90,8 @@ public class ReservaCaronaService {
 
         notificacaoService.dispararNotificacaoSistemica(
                 carona.getMotorista(),
-                "Nova Solicitação de Reserva 🚗",
-                usuario.getNome() + " solicitou uma reserva na sua carona para " + carona.getDestinoDescricao() + ".",
+                "Nova solicitação de reserva",
+                NotificacaoTemplates.novaSolicitacaoReserva(usuario, carona),
                 TipoNotificacao.RESERVA_CRIADA
         );
 
@@ -119,8 +120,8 @@ public class ReservaCaronaService {
 
         notificacaoService.dispararNotificacaoSistemica(
                 reserva.getUsuario(),
-                "Reserva Aceita! 🎉",
-                "Sua reserva para a carona com destino a " + reserva.getCarona().getDestinoDescricao() + " foi aceita pelo motorista.",
+                "Reserva Aceita",
+                NotificacaoTemplates.reservaAceita(reserva.getCarona()),
                 TipoNotificacao.RESERVA_ACEITA
         );
 
@@ -142,33 +143,12 @@ public class ReservaCaronaService {
 
         notificacaoService.dispararNotificacaoSistemica(
                 reserva.getUsuario(),
-                "Reserva Recusada 😔",
-                "Sua solicitação de reserva para a carona de " + reserva.getCarona().getDestinoDescricao() + " foi recusada pelo motorista.",
+                "Reserva Recusada",
+                NotificacaoTemplates.reservaRecusada(reserva.getCarona()),
                 TipoNotificacao.RESERVA_RECUSADA
         );
 
         return new ReservaStatusResponseDTO(reserva);
-    }
-
-    @Transactional
-    public void removerPassageiro(Long reservaId, Long motoristaId) {
-        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
-        validarMotorista(reserva, motoristaId);
-
-        if (reserva.getStatus() != StatusReserva.ACEITA) {
-            throw new EstadoInvalidoException("Apenas reservas já ACEITAS podem ser canceladas por remoção de passageiro");
-        }
-
-        reserva.setStatus(StatusReserva.CANCELADA);
-        reserva.setDataResposta(LocalDateTime.now());
-        repository.save(reserva);
-
-        notificacaoService.dispararNotificacaoSistemica(
-                reserva.getUsuario(),
-                "Remoção de Passageiro ⚠️",
-                "Você foi removido da lista de passageiros da carona para " + reserva.getCarona().getDestinoDescricao() + ".",
-                TipoNotificacao.RESERVA_CANCELADA
-        );
     }
 
     @Transactional
@@ -201,15 +181,20 @@ public class ReservaCaronaService {
         if (isPassageiro) {
             notificacaoService.dispararNotificacaoSistemica(
                     reserva.getCarona().getMotorista(),
-                    "Reserva Cancelada pelo Passageiro 😟",
-                    reserva.getUsuario().getNome() + " cancelou a reserva na sua carona para " + reserva.getCarona().getDestinoDescricao() + ".",
+                    "Reserva Cancelada pelo Passageiro",
+                    NotificacaoTemplates.reservaCanceladaPeloPassageiro(
+                            reserva.getUsuario(),
+                            reserva.getCarona()
+                    ),
                     TipoNotificacao.RESERVA_CANCELADA
             );
         } else {
             notificacaoService.dispararNotificacaoSistemica(
                     reserva.getUsuario(),
-                    "Reserva Cancelada pelo Motorista ⚠️",
-                    "O motorista cancelou a sua vaga na carona para " + reserva.getCarona().getDestinoDescricao() + ".",
+                    "Reserva Cancelada pelo Motorista",
+                    NotificacaoTemplates.reservaCanceladaPeloMotorista(
+                            reserva.getCarona()
+                    ),
                     TipoNotificacao.RESERVA_CANCELADA
             );
         }
@@ -231,8 +216,10 @@ public class ReservaCaronaService {
 
         notificacaoService.dispararNotificacaoSistemica(
                 reserva.getCarona().getMotorista(),
-                "Reserva Cancelada pelo Passageiro 😟",
-                reserva.getUsuario().getNome() + " cancelou a reserva na sua carona para " + reserva.getCarona().getDestinoDescricao() + ".",
+                "Passageiro Removido Da Reserva",
+                NotificacaoTemplates.passageiroRemovidoPeloMotorista(
+                        reserva.getCarona()
+                ),
                 TipoNotificacao.RESERVA_CANCELADA
         );
     }
