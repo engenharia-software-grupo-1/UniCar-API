@@ -12,7 +12,6 @@ import java.util.List;
 @Repository
 public interface MensagemRepository extends JpaRepository<Mensagem, Long> {
 
-    // Critério de Aceitação: Mensagens são exibidas em ordem cronológica (data_envio ASC)
     List<Mensagem> findByChatIdOrderByDataEnvioAsc(Long chatId);
 
     /**

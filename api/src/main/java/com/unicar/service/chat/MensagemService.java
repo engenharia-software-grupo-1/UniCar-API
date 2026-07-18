@@ -40,16 +40,18 @@ public class MensagemService {
     public MensagemDTO enviarMensagem(Long chatId, Long usuarioAutenticadoId, EnviarMensagemRequestDTO request) {
         Chat chat = chatService.buscarEValidarAcessoAoChat(chatId, usuarioAutenticadoId);
 
+        Long passageiroId = chat.getReserva().getUsuario().getId();
+        Long motoristaId = chat.getReserva().getCarona().getMotorista().getId();
+
+        if (!usuarioAutenticadoId.equals(passageiroId) && !usuarioAutenticadoId.equals(motoristaId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado: Você não faz parte deste chat.");
+        }
+
         StatusReserva statusReserva = chat.getReserva().getStatus();
-        if (statusReserva == StatusReserva.RECUSADA ||
-                statusReserva == StatusReserva.CANCELADA ||
-                statusReserva == StatusReserva.REMOVIDA ||
-                statusReserva == StatusReserva.CONCLUIDA) {
+        if (statusReserva != StatusReserva.ACEITA && statusReserva != StatusReserva.PENDENTE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é possível enviar mensagens para uma reserva inativa.");
         }
 
-        Long passageiroId = chat.getReserva().getUsuario().getId();
-        Long motoristaId = chat.getReserva().getCarona().getMotorista().getId();
         Long destinatarioId = usuarioAutenticadoId.equals(passageiroId) ? motoristaId : passageiroId;
 
         boolean remetenteBloqueou = bloqueioUsuarioRepository.existsByUsuarioIdAndUsuarioBloqueadoId(usuarioAutenticadoId, destinatarioId);
