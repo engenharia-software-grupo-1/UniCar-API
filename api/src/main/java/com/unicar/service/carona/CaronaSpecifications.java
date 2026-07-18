@@ -93,7 +93,7 @@ public class CaronaSpecifications {
             LocalDateTime inicioDia = dataHoraSaida.toLocalDate().atStartOfDay();
             LocalDateTime fimDia = dataHoraSaida.toLocalDate().atTime(23, 59, 59, 999_000_000);
             return cb.and(
-                    cb.greaterThanOrEqualTo(root.get("dataHoraPartida"), dataHoraSaida),
+                    cb.greaterThanOrEqualTo(root.get("dataHoraPartida"), inicioDia),
                     cb.lessThanOrEqualTo(root.get("dataHoraPartida"), fimDia)
             );
         };

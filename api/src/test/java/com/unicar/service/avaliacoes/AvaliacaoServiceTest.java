@@ -89,7 +89,7 @@ class AvaliacaoServiceTest {
             when(reservaCaronaRepository.existsByCaronaIdAndUsuarioId(1L, 2L))
                     .thenReturn(true);
 
-            when(avaliacaoRepository.existsByCaronaIdAndAvaliadorId(1L, 1L))
+            when(avaliacaoRepository.existsByCaronaIdAndAvaliadorIdAndAvaliadoId(1L, 1L, 2L))
                     .thenReturn(false);
 
             avaliacaoService.avaliar(1L, dto);
@@ -150,7 +150,7 @@ class AvaliacaoServiceTest {
             when(reservaCaronaRepository.existsByCaronaIdAndUsuarioId(1L, 2L))
                     .thenReturn(true);
 
-            when(avaliacaoRepository.existsByCaronaIdAndAvaliadorId(1L, 1L))
+            when(avaliacaoRepository.existsByCaronaIdAndAvaliadorIdAndAvaliadoId(1L, 1L, 2L))
                     .thenReturn(true);
 
             assertThrows(RegraDeNegocioException.class,

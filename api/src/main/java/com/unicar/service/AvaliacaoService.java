@@ -47,7 +47,7 @@ public class AvaliacaoService {
         validarNota(dto.nota());
         validarCaronaFinalizada(carona);
         validarParticipacao(carona, avaliador.getId(), avaliado.getId());
-        validarNaoAvaliouAntes(carona.getId(), avaliador.getId());
+        validarNaoAvaliouAntes(carona.getId(), avaliador.getId(), avaliado.getId());
 
         Avaliacao avaliacao = Avaliacao.builder()
                 .carona(carona)
@@ -176,17 +176,15 @@ public class AvaliacaoService {
             throw new RegraDeNegocioException(
                     "O usuário não pode avaliar a si mesmo.");
         }
+        if (avaliadorEhPassageiro && avaliadoEhPassageiro) {
+            throw new RegraDeNegocioException(
+                "Passageiros não podem se avaliar entre si.");
+        }
     }
 
-    private void validarNaoAvaliouAntes(Long caronaId,
-                                        Long avaliadorId) {
-
-        if (avaliacaoRepository.existsByCaronaIdAndAvaliadorId(
-                caronaId,
-                avaliadorId)) {
-
-            throw new RegraDeNegocioException(
-                    "Você já avaliou nesta carona.");
+    private void validarNaoAvaliouAntes(Long caronaId, Long avaliadorId, Long avaliadoId) {
+        if (avaliacaoRepository.existsByCaronaIdAndAvaliadorIdAndAvaliadoId(caronaId, avaliadorId, avaliadoId)) {
+            throw new RegraDeNegocioException("Você já avaliou este usuário nesta carona.");
         }
     }
 }

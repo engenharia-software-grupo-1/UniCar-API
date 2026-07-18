@@ -35,7 +35,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.unicar.domain.Usuario;
 import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
 import com.unicar.dto.usuario.UsuarioDTO;
-import com.unicar.dto.usuario.UsuarioPublicoDTO;
 import com.unicar.enums.Genero;
 import com.unicar.security.JwtAuthenticationFilter;
 import com.unicar.security.UsuarioDetails;
@@ -112,42 +111,6 @@ class UsuarioControllerTest {
                     .andExpect(jsonPath("$.cpf").value("12345678901"));
  
             verify(usuarioService).buscarPerfil(1L);
-        }
-    }
- 
-    @Nested
-    @DisplayName("GET /usuarios/{matricula}")
-    class BuscarUsuario {
- 
-        @Test
-        @DisplayName("deve retornar 200 e o usuário público pela matrícula")
-        void deveBuscarUsuarioPublico() throws Exception {
-            UsuarioPublicoDTO dto = new UsuarioPublicoDTO(
-                    1L, "20230001", "Oscar Rodrigues", "oscar@teste.com", "Computação"
-            );
- 
-            when(usuarioService.buscarUsuario("20230001")).thenReturn(dto);
- 
-            mockMvc.perform(get("/usuarios/20230001"))
-                    .andExpect(status().isOk())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.id").value(1))
-                    .andExpect(jsonPath("$.matricula").value("20230001"))
-                    .andExpect(jsonPath("$.nome").value("Oscar Rodrigues"));
- 
-            verify(usuarioService).buscarUsuario("20230001");
-        }
- 
-        @Test
-        @DisplayName("deve retornar 404 quando a matrícula não existir")
-        void deveRetornar404QuandoMatriculaNaoExiste() throws Exception {
-            when(usuarioService.buscarUsuario("99999999"))
-                    .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuário não encontrado"));
- 
-            mockMvc.perform(get("/usuarios/99999999"))
-                    .andExpect(status().isNotFound());
- 
-            verify(usuarioService).buscarUsuario("99999999");
         }
     }
  

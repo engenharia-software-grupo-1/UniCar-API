@@ -10,6 +10,7 @@ import com.unicar.dto.carona.ReservaRecebidaResponseDTO;
 import com.unicar.dto.carona.ReservaRequestDTO;
 import com.unicar.dto.carona.ReservaResponseDTO;
 import com.unicar.dto.carona.ReservaSimulacaoResponseDTO;
+import com.unicar.dto.carona.ReservaStatusResponseDTO;
 import com.unicar.dto.carona.UsuarioResumoDTO;
 import com.unicar.enums.StatusReserva;
 import com.unicar.security.JwtAuthenticationFilter;
@@ -235,6 +236,63 @@ class ReservaCaronaControllerTest {
                 .andExpect(jsonPath("$.origemEmbarque.descricao").value("Rua Aprígio Veloso"));
 
             verify(reservaCaronaService).buscarDetalhe(50L, USUARIO_ID);
+        }
+    }
+
+    @Nested
+    @DisplayName("PATCH /reservas/{id}/aceitar")
+    class Aceitar {
+
+        @Test
+        @DisplayName("deve retornar 200 com status ACEITA")
+        void deveAceitarReserva() throws Exception {
+            when(reservaCaronaService.aceitar(50L, USUARIO_ID))
+                    .thenReturn(new ReservaStatusResponseDTO(50L, StatusReserva.ACEITA));
+
+            mockMvc.perform(patch("/reservas/{id}/aceitar", 50L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(50))
+                .andExpect(jsonPath("$.status").value("ACEITA"));
+
+            verify(reservaCaronaService).aceitar(50L, USUARIO_ID);
+        }
+    }
+
+    @Nested
+    @DisplayName("PATCH /reservas/{id}/recusar")
+    class Recusar {
+
+        @Test
+        @DisplayName("deve retornar 200 com status RECUSADA")
+        void deveRecusarReserva() throws Exception {
+            when(reservaCaronaService.recusar(50L, USUARIO_ID))
+                    .thenReturn(new ReservaStatusResponseDTO(50L, StatusReserva.RECUSADA));
+
+            mockMvc.perform(patch("/reservas/{id}/recusar", 50L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(50))
+                .andExpect(jsonPath("$.status").value("RECUSADA"));
+
+            verify(reservaCaronaService).recusar(50L, USUARIO_ID);
+        }
+    }
+
+    @Nested
+    @DisplayName("PATCH /reservas/{id}/cancelar")
+    class Cancelar {
+
+        @Test
+        @DisplayName("deve retornar 200 com status CANCELADA")
+        void deveCancelarReserva() throws Exception {
+            when(reservaCaronaService.cancelar(50L, USUARIO_ID))
+                    .thenReturn(new ReservaStatusResponseDTO(50L, StatusReserva.CANCELADA));
+
+            mockMvc.perform(patch("/reservas/{id}/cancelar", 50L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(50))
+                .andExpect(jsonPath("$.status").value("CANCELADA"));
+
+            verify(reservaCaronaService).cancelar(50L, USUARIO_ID);
         }
     }
 

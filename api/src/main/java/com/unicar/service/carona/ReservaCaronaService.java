@@ -4,6 +4,7 @@ import com.unicar.domain.Carona;
 import com.unicar.domain.ReservaCarona;
 import com.unicar.domain.Usuario;
 import com.unicar.dto.carona.*;
+import com.unicar.dto.carona.ReservaStatusResponseDTO;
 import com.unicar.enums.StatusCarona;
 import com.unicar.enums.StatusReserva;
 import com.unicar.exception.*;
@@ -48,7 +49,7 @@ public class ReservaCaronaService {
             throw new EstadoInvalidoException("Apenas caronas com status CRIADA podem receber novas reservas");
         }
 
-        int vagasOcupadas = repository.countByCarona_IdAndStatus(carona.getId(), StatusReserva.ACEITA);
+        int vagasOcupadas = repository.somarPassageirosPorCaronaEStatus(carona.getId(), StatusReserva.ACEITA);
         int vagasDisponiveis = carona.getVagasTotais() - vagasOcupadas;
         if (request.quantidadePassageiros() > vagasDisponiveis) {
             throw new RegraDeNegocioException("Quantidade de vagas indisponível");
@@ -73,7 +74,7 @@ public class ReservaCaronaService {
                 .origemEmbarqueLongitude(request.origemEmbarque().longitude())
                 .valorContribuicao(valorContribuicao)
                 .status(StatusReserva.PENDENTE)
-                .dataExpiracao(carona.getDataHoraPartida())
+                .dataExpiracao(carona.getDataHoraPartida().minusHours(1))
                 .build();
 
         reserva = repository.save(reserva);
@@ -100,7 +101,7 @@ public class ReservaCaronaService {
             throw new EstadoInvalidoException("Apenas reservas PENDENTES podem ser aceitas");
         }
 
-        int vagasOcupadas = repository.countByCarona_IdAndStatus(reserva.getCarona().getId(), StatusReserva.ACEITA);
+        int vagasOcupadas = repository.somarPassageirosPorCaronaEStatus(carona.getId(), StatusReserva.ACEITA);
         int vagasDisponiveis = reserva.getCarona().getVagasTotais() - vagasOcupadas;
         if (reserva.getQuantidadePassageiros() > vagasDisponiveis) {
             throw new RegraDeNegocioException("Não há vagas suficientes para aceitar esta reserva");
@@ -166,25 +167,6 @@ public class ReservaCaronaService {
         );
     }
 
-    @Transactional
-    public void removerReserva(Long reservaId, Long usuarioId) {
-        ReservaCarona reserva = buscarReserva(reservaId);
-        validarDono(reserva, usuarioId);
-
-        if (reserva.getStatus() != StatusReserva.PENDENTE && reserva.getStatus() != StatusReserva.ACEITA) {
-            throw new EstadoInvalidoException("Não é possível remover uma reserva com status " + reserva.getStatus());
-        }
-
-        reserva.setStatus(StatusReserva.CANCELADA);
-        repository.save(reserva);
-
-        notificacaoService.dispararNotificacaoSistemica(
-                reserva.getCarona().getMotorista(),
-                "Reserva Cancelada 🚫",
-                "O passageiro " + reserva.getUsuario().getNome() + " cancelou a reserva na sua carona para " + reserva.getCarona().getDestinoDescricao() + "."
-        );
-    }
-
     public ReservaSimulacaoResponseDTO simular(ReservaRequestDTO request) {
         Carona carona = buscarCarona(request.caronaId());
         BigDecimal valorContribuicao = calcularValorContribuicao(
@@ -216,8 +198,101 @@ public class ReservaCaronaService {
         return new ReservaDetalheResponseDTO(reserva);
     }
 
+    @Transactional
+    public ReservaStatusResponseDTO aceitar(Long reservaId, Long motoristaId) {
+        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
+        validarMotorista(reserva, motoristaId);
+
+        if (reserva.getStatus() != StatusReserva.PENDENTE) {
+            throw new EstadoInvalidoException("Apenas reservas PENDENTES podem ser aceitas");
+        }
+
+        Carona carona = buscarCaronaParaAtualizacao(reserva.getCarona().getId());
+        int vagasOcupadas = repository.somarPassageirosPorCaronaEStatus(carona.getId(), StatusReserva.ACEITA);
+        int vagasDisponiveis = carona.getVagasTotais() - vagasOcupadas;
+        if (reserva.getQuantidadePassageiros() > vagasDisponiveis) {
+            throw new RegraDeNegocioException("Quantidade de vagas indisponível");
+        }
+
+        reserva.setStatus(StatusReserva.ACEITA);
+        reserva.setDataResposta(LocalDateTime.now());
+        reserva = repository.save(reserva);
+
+        return new ReservaStatusResponseDTO(reserva);
+    }
+
+    @Transactional
+    public ReservaStatusResponseDTO recusar(Long reservaId, Long motoristaId) {
+        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
+        validarMotorista(reserva, motoristaId);
+
+        if (reserva.getStatus() != StatusReserva.PENDENTE) {
+            throw new EstadoInvalidoException("Apenas reservas PENDENTES podem ser recusadas");
+        }
+
+        reserva.setStatus(StatusReserva.RECUSADA);
+        reserva.setDataResposta(LocalDateTime.now());
+        reserva = repository.save(reserva);
+
+        return new ReservaStatusResponseDTO(reserva);
+    }
+
+    @Transactional
+    public ReservaStatusResponseDTO cancelar(Long reservaId, Long usuarioId) {
+        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
+
+        boolean isPassageiro = reserva.getUsuario().getId().equals(usuarioId);
+        boolean isMotorista = reserva.getCarona().getMotorista().getId().equals(usuarioId);
+        if (!isPassageiro && !isMotorista) {
+            throw new AcessoNegadoException("Usuário não tem permissão para cancelar esta reserva");
+        }
+
+        StatusReserva status = reserva.getStatus();
+        if (status == StatusReserva.CONCLUIDA) {
+            throw new EstadoInvalidoException("Não é possível cancelar uma reserva finalizada");
+        }
+
+        boolean podeCancelar = isPassageiro
+                ? (status == StatusReserva.PENDENTE || status == StatusReserva.ACEITA)
+                : status == StatusReserva.ACEITA;
+
+        if (!podeCancelar) {
+            throw new EstadoInvalidoException("Não é possível cancelar uma reserva com status " + status);
+        }
+
+        reserva.setStatus(StatusReserva.CANCELADA);
+        reserva.setDataResposta(LocalDateTime.now());
+        reserva = repository.save(reserva);
+
+        return new ReservaStatusResponseDTO(reserva);
+    }
+
+    @Transactional
+    public void removerReserva(Long reservaId, Long usuarioId) {
+        ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
+        validarDono(reserva, usuarioId);
+
+        if (reserva.getStatus() != StatusReserva.PENDENTE && reserva.getStatus() != StatusReserva.ACEITA) {
+            throw new EstadoInvalidoException("Não é possível remover uma reserva com status " + reserva.getStatus());
+        }
+
+        reserva.setStatus(StatusReserva.CANCELADA);
+        repository.save(reserva);
+    }
+
     public ReservaCarona buscarReserva(Long reservaId) {
         return repository.findById(reservaId).orElseThrow(() -> new ReservaNaoEncontradaException("Reserva não encontrada: id=" + reservaId));
+    }
+
+    private ReservaCarona buscarReservaParaAtualizacao(Long reservaId) {
+        return repository.findByIdForUpdate(reservaId)
+                .orElseThrow(() -> new ReservaNaoEncontradaException("Reserva não encontrada: id=" + reservaId));
+    }
+
+    private void validarMotorista(ReservaCarona reserva, Long motoristaId) {
+        if (!reserva.getCarona().getMotorista().getId().equals(motoristaId)) {
+            throw new AcessoNegadoException("Usuário não é o motorista desta carona");
+        }
     }
 
     private void validarDono(ReservaCarona reserva, Long usuarioId) {
