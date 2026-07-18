@@ -96,24 +96,26 @@ public class CaronaService {
         List<com.unicar.domain.InteresseTrajeto> todosInteresses = interesseTrajetoRepository.findAll();
 
         caronasSalvas.forEach(carona -> {
-            todosInteresses.stream()
-                    .filter(interesse -> {
-                        return interesse.getDestinoLatitude().compareTo(carona.getDestinoLatitude()) == 0
-                                && interesse.getDestinoLongitude().compareTo(carona.getDestinoLongitude()) == 0;
-                    })
-                    .forEach(interesse -> {
-                        if (!interesse.getUsuarioId().equals(motoristaId)) {
+            List<Long> usuarioIdsInteressados = todosInteresses.stream()
+                    .filter(interesse -> !interesse.getUsuarioId().equals(motoristaId))
+                    .filter(interesse -> interesse.getDestinoLatitude().compareTo(carona.getDestinoLatitude()) == 0
+                            && interesse.getDestinoLongitude().compareTo(carona.getDestinoLongitude()) == 0)
+                    .map(com.unicar.domain.InteresseTrajeto::getUsuarioId)
+                    .distinct()
+                    .toList();
 
-                            usuarioRepository.findById(interesse.getUsuarioId()).ifPresent(usuario -> {
-                                notificacaoService.dispararNotificacaoSistemica(
-                                        usuario,
-                                        "Carona de seu Interesse Criada! 📍",
-                                        "Uma nova carona com destino a " + carona.getDestinoDescricao() + " acabou de ser cadastrada.",
-                                        TipoNotificacao.INTERESSE_TRAJETO
-                                );
-                            });
-                        }
-                    });
+            if (!usuarioIdsInteressados.isEmpty()) {
+                List<Usuario> usuariosInteressados = usuarioRepository.findAllById(usuarioIdsInteressados);
+
+                usuariosInteressados.forEach(usuario -> {
+                    notificacaoService.dispararNotificacaoSistemica(
+                            usuario,
+                            "Carona de seu Interesse Criada! 📍",
+                            "Uma nova carona com destino a " + carona.getDestinoDescricao() + " acabou de ser cadastrada.",
+                            TipoNotificacao.INTERESSE_TRAJETO
+                    );
+                });
+            }
         });
 
         return caronasSalvas.stream()
