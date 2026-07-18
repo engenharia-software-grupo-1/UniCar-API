@@ -83,7 +83,8 @@ public class ReservaCaronaService {
         notificacaoService.dispararNotificacaoSistemica(
                 carona.getMotorista(),
                 "Nova Solicitação de Reserva 🚗",
-                usuario.getNome() + " solicitou uma reserva na sua carona para " + carona.getDestinoDescricao() + "."
+                usuario.getNome() + " solicitou uma reserva na sua carona para " + carona.getDestinoDescricao() + ".",
+                com.unicar.enums.TipoNotificacao.RESERVA
         );
 
         return new ReservaResponseDTO(reserva);
@@ -115,7 +116,8 @@ public class ReservaCaronaService {
         notificacaoService.dispararNotificacaoSistemica(
                 reserva.getUsuario(),
                 "Reserva Aceita! 🎉",
-                "Sua reserva para a carona com destino a " + reserva.getCarona().getDestinoDescricao() + " foi aceita pelo motorista."
+                "Sua reserva para a carona com destino a " + reserva.getCarona().getDestinoDescricao() + " foi aceita pelo motorista.",
+                com.unicar.enums.TipoNotificacao.RESERVA // 👈 Ajustado aqui
         );
     }
 
@@ -139,7 +141,8 @@ public class ReservaCaronaService {
         notificacaoService.dispararNotificacaoSistemica(
                 reserva.getUsuario(),
                 "Reserva Recusada 😔",
-                "Sua solicitação de reserva para a carona de " + reserva.getCarona().getDestinoDescricao() + " foi recusada pelo motorista."
+                "Sua solicitação de reserva para a carona de " + reserva.getCarona().getDestinoDescricao() + " foi recusada pelo motorista.",
+                com.unicar.enums.TipoNotificacao.RESERVA // 👈 Ajustado aqui
         );
     }
 
@@ -163,10 +166,12 @@ public class ReservaCaronaService {
         notificacaoService.dispararNotificacaoSistemica(
                 reserva.getUsuario(),
                 "Remoção de Passageiro ⚠️",
-                "Você foi removido da lista de passageiros da carona para " + reserva.getCarona().getDestinoDescricao() + "."
+                "Você foi removido da lista de passageiros da carona para " + reserva.getCarona().getDestinoDescricao() + ".",
+                com.unicar.enums.TipoNotificacao.RESERVA // 👈 Ajustado aqui
         );
     }
 
+    // O restante do código permanece o mesmo...
     public ReservaSimulacaoResponseDTO simular(ReservaRequestDTO request) {
         Carona carona = buscarCarona(request.caronaId());
         BigDecimal valorContribuicao = calcularValorContribuicao(

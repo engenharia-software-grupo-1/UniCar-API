@@ -4,6 +4,7 @@ import com.unicar.domain.Notificacao;
 import com.unicar.domain.Usuario;
 import com.unicar.dto.notificacao.ContadorNotificacoesDTO;
 import com.unicar.dto.notificacao.NotificacaoDTO;
+import com.unicar.enums.TipoNotificacao;
 import com.unicar.repository.NotificacaoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -51,12 +52,13 @@ public class NotificacaoService {
      * para disparar notificações automaticamente com base nos Eventos Geradores da US.
      */
     @Transactional
-    public void dispararNotificacaoSistemica(Usuario destino, String titulo, String mensagem) {
+    public void dispararNotificacaoSistemica(Usuario destino, String titulo, String mensagem, TipoNotificacao tipo) {
         Notificacao notificacao = Notificacao.builder()
                 .usuario(destino)
                 .titulo(titulo)
                 .mensagem(mensagem)
                 .lida(false)
+                .tipo(tipo)
                 .build();
         notificacaoRepository.save(notificacao);
     }

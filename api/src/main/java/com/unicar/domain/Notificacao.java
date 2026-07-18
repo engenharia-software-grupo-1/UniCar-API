@@ -1,5 +1,6 @@
 package com.unicar.domain;
 
+import com.unicar.enums.TipoNotificacao;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -33,6 +34,10 @@ public class Notificacao {
 
     @Column(name = "data_envio", nullable = false)
     private LocalDateTime dataCriacao;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo", nullable = false, length = 20)
+    private TipoNotificacao tipo;
 
     @PrePersist
     protected void onCreate() {

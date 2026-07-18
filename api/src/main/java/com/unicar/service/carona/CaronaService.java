@@ -7,6 +7,7 @@ import com.unicar.domain.Veiculo;
 import com.unicar.dto.carona.*;
 import com.unicar.enums.StatusCarona;
 import com.unicar.enums.StatusReserva;
+import com.unicar.enums.TipoNotificacao;
 import com.unicar.exception.*;
 import com.unicar.repository.CaronaRepository;
 import com.unicar.repository.ReservaCaronaRepository;
@@ -162,7 +163,7 @@ public class CaronaService {
 
         if (request.datasHorasSaida() == null || request.datasHorasSaida().size() != 1) {
             throw new RegraDeNegocioException(
-                "A atualização de carona aceita exatamente uma data/hora de saída");
+                    "A atualização de carona aceita exatamente uma data/hora de saída");
         }
 
         LocalDateTime novaDataHora = request.datasHorasSaida().getFirst();
@@ -227,7 +228,8 @@ public class CaronaService {
             notificacaoService.dispararNotificacaoSistemica(
                     reserva.getUsuario(),
                     "Carona Cancelada ⚠️",
-                    "A carona oferecida por " + carona.getMotorista().getNome() + " com destino a " + carona.getDestinoDescricao() + " foi cancelada."
+                    "A carona oferecida por " + carona.getMotorista().getNome() + " com destino a " + carona.getDestinoDescricao() + " foi cancelada.",
+                    TipoNotificacao.CARONA // 👈 Ajustado para CARONA
             );
         });
 
@@ -288,13 +290,15 @@ public class CaronaService {
             notificacaoService.dispararNotificacaoSistemica(
                     r.getUsuario(),
                     "Carona Finalizada 🏁",
-                    "Você chegou ao destino de sua carona para " + carona.getDestinoDescricao() + "."
+                    "Você chegou ao destino de sua carona para " + carona.getDestinoDescricao() + ".",
+                    TipoNotificacao.CARONA // 👈 Ajustado para CARONA
             );
 
             notificacaoService.dispararNotificacaoSistemica(
                     r.getUsuario(),
                     "Avalie sua Viagem ⭐",
-                    "Que tal avaliar sua experiência na carona com o motorista " + carona.getMotorista().getNome() + "?"
+                    "Que tal avaliar sua experiência na carona com o motorista " + carona.getMotorista().getNome() + "?",
+                    TipoNotificacao.SISTEMA // 👈 Ajustado para SISTEMA
             );
         });
 
@@ -304,7 +308,8 @@ public class CaronaService {
             notificacaoService.dispararNotificacaoSistemica(
                     carona.getMotorista(),
                     "Avalie seus Passageiros ⭐",
-                    "Sua carona foi finalizada com sucesso. Deixe sua avaliação para seus passageiros."
+                    "Sua carona foi finalizada com sucesso. Deixe sua avaliação para seus passageiros.",
+                    TipoNotificacao.SISTEMA // 👈 Ajustado para SISTEMA
             );
         }
     }
