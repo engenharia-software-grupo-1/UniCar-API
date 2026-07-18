@@ -5,10 +5,10 @@ import com.unicar.domain.chat.Chat;
 import com.unicar.domain.chat.Mensagem;
 import com.unicar.dto.chat.EnviarMensagemRequestDTO;
 import com.unicar.dto.chat.MensagemDTO;
+import com.unicar.enums.StatusReserva;
+import com.unicar.repository.BloqueioUsuarioRepository;
 import com.unicar.repository.UsuarioRepository;
 import com.unicar.repository.chat.MensagemRepository;
-import com.unicar.enums.StatusCarona;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,6 +24,7 @@ public class MensagemService {
     private final MensagemRepository mensagemRepository;
     private final ChatService chatService;
     private final UsuarioRepository usuarioRepository;
+    private final BloqueioUsuarioRepository bloqueioUsuarioRepository;
 
     @Transactional(readOnly = true)
     public List<MensagemDTO> listarMensagensDoChat(Long chatId, Long usuarioAutenticadoId) {
@@ -39,14 +40,23 @@ public class MensagemService {
     public MensagemDTO enviarMensagem(Long chatId, Long usuarioAutenticadoId, EnviarMensagemRequestDTO request) {
         Chat chat = chatService.buscarEValidarAcessoAoChat(chatId, usuarioAutenticadoId);
 
-
-        StatusCarona statusCarona = chat.getReserva().getCarona().getStatus();
-
-        if (statusCarona == StatusCarona.CANCELADA) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é possível enviar mensagens em caronas canceladas");
+        StatusReserva statusReserva = chat.getReserva().getStatus();
+        if (statusReserva == StatusReserva.RECUSADA ||
+                statusReserva == StatusReserva.CANCELADA ||
+                statusReserva == StatusReserva.REMOVIDA ||
+                statusReserva == StatusReserva.CONCLUIDA) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é possível enviar mensagens para uma reserva inativa.");
         }
-        if (statusCarona == StatusCarona.FINALIZADA) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Não é possível enviar mensagens após o encerramento da carona");
+
+        Long passageiroId = chat.getReserva().getUsuario().getId();
+        Long motoristaId = chat.getReserva().getCarona().getMotorista().getId();
+        Long destinatarioId = usuarioAutenticadoId.equals(passageiroId) ? motoristaId : passageiroId;
+
+        boolean remetenteBloqueou = bloqueioUsuarioRepository.existsByUsuarioIdAndUsuarioBloqueadoId(usuarioAutenticadoId, destinatarioId);
+        boolean destinatarioBloqueou = bloqueioUsuarioRepository.existsByUsuarioIdAndUsuarioBloqueadoId(destinatarioId, usuarioAutenticadoId);
+
+        if (remetenteBloqueou || destinatarioBloqueou) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Usuários bloqueados não podem trocar mensagens.");
         }
 
         Usuario remetente = usuarioRepository.findById(usuarioAutenticadoId)
