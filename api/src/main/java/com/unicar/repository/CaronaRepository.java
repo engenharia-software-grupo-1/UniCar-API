@@ -49,7 +49,7 @@ public interface CaronaRepository extends JpaRepository<Carona, Long>, JpaSpecif
     @Query("SELECT c FROM Carona c " +
             "WHERE c.motorista.id = :motoristaId " +
             "AND (c.status = 'CONCLUIDA' OR c.status = 'ENCERRADA') " +
-            "ORDER BY c.dataHora DESC")
+            "ORDER BY c.dataHoraPartida DESC")
     Page<Carona> findHistoricoComoMotorista(@Param("motoristaId") Long motoristaId, Pageable pageable);
 
     interface CaronaProximaProjection {
