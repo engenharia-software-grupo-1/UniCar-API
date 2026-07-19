@@ -377,10 +377,6 @@ class AuthServiceTest {
                     }
                     """, MediaType.APPLICATION_JSON));
 
-            given(usuarioRepository.findByCpf("123456")).willReturn(Optional.empty());
-            given(usuarioRepository.findByMatricula("2023001")).willReturn(Optional.empty());
-            given(usuarioRepository.findByEmail("invalido@unicar.edu.br")).willReturn(Optional.empty());
-
             assertThatThrownBy(() -> authService.login(requestValido()))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasFieldOrPropertyWithValue("statusCode", HttpStatus.BAD_GATEWAY);
