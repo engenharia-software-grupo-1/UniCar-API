@@ -37,6 +37,10 @@ public class AvaliacaoService {
     private final CaronaRepository caronaRepository;
     private final ReservaCaronaRepository reservaCaronaRepository;
 
+/**
+ * Registra a avaliação de um usuário sobre outro em uma carona finalizada,
+ * validando participação, nota e se já não foi avaliado antes.
+ */
     @Transactional
     public Long avaliar(Long usuarioId, AvaliacaoRequestDTO dto) {
         Usuario avaliador = buscarUsuario(usuarioId);
@@ -60,6 +64,9 @@ public class AvaliacaoService {
         return avaliacaoRepository.save(avaliacao).getId();
     }
 
+    /**
+     * Lista todas as avaliações recebidas por um usuário.
+     */
     public List<AvaliacaoRecebidaDTO> listarAvaliacoesRecebidas(Long usuarioId) {
         buscarUsuario(usuarioId);
 
@@ -69,6 +76,9 @@ public class AvaliacaoService {
                 .toList();
     }
 
+    /**
+     * Calcula a reputação (média e quantidade de avaliações) de um único usuário.
+     */
     public ReputacaoDTO buscarReputacao(Long usuarioId) {
         Usuario usuario = buscarUsuario(usuarioId);
 
@@ -82,6 +92,12 @@ public class AvaliacaoService {
         );
     }
 
+    /**
+     * Calcula a reputação de vários usuários em uma única query agregada,
+     * evitando N chamadas ao banco quando há múltiplos motoristas a avaliar
+     * (usado, por exemplo, na busca de caronas disponíveis).
+     * Usuários sem avaliação retornam média 0.0 e quantidade 0.
+     */
     public List<ReputacaoDTO> buscarReputacoes(List<Long> usuarioIds) {
         if (usuarioIds == null || usuarioIds.isEmpty()) {
             return List.of();
