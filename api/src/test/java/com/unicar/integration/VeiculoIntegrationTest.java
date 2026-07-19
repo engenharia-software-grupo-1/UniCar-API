@@ -41,11 +41,11 @@ class VeiculoIntegrationTest extends IntegrationTestSupport {
         return """
                 {
                   "modelo": "Onix",
-                  "placa": "%s",
+                  "placa": "__PLACA__",
                   "cor": "Prata",
                   "tipoVeiculo": "CARRO"
                 }
-                """.formatted(placa);
+                """.replace("__PLACA__", placa);
     }
 
     @Test

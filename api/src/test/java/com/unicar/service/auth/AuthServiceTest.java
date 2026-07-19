@@ -383,9 +383,9 @@ class AuthServiceTest {
                       "matricula_do_estudante": "2025001",
                       "nome_do_curso": "Ciência da Computação",
                       "sexo": "F",
-                      "cpf": "%s"
+                      "cpf": "__CPF__"
                     }
-                    """.formatted(cpfBruto), MediaType.APPLICATION_JSON));
+                    """.replace("__CPF__", cpfBruto), MediaType.APPLICATION_JSON));
 
             if (deveLancarBadGateway) {
                 assertThatThrownBy(() -> authService.login(requestValido()))

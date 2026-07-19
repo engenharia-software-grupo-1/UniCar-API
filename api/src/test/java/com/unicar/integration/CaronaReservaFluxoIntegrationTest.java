@@ -62,15 +62,17 @@ class CaronaReservaFluxoIntegrationTest extends IntegrationTestSupport {
 
         String requestCarona = """
                 {
-                  "veiculoId": %d,
+                  "veiculoId": __VEICULO_ID__,
                   "origem": {"descricao": "Bodocongó", "latitude": -7.2200000, "longitude": -35.9100000},
                   "destino": {"descricao": "UFCG", "latitude": -7.2300000, "longitude": -35.8700000},
                   "pontoEncontro": "Portaria principal",
-                  "datasHorasSaida": ["%s"],
+                  "datasHorasSaida": ["__DATA_PARTIDA__"],
                   "quantidadeVagas": 2,
                   "valorContribuicao": 3.00
                 }
-                """.formatted(veiculo.getId(), dataPartida);
+                """
+                .replace("__VEICULO_ID__", String.valueOf(veiculo.getId()))
+                .replace("__DATA_PARTIDA__", dataPartida.toString());
 
         String respostaCarona = mockMvc.perform(post("/caronas")
                         .header("Authorization", tokenMotorista)
@@ -84,11 +86,11 @@ class CaronaReservaFluxoIntegrationTest extends IntegrationTestSupport {
 
         String requestReserva = """
                 {
-                  "caronaId": %d,
+                  "caronaId": __CARONA_ID__,
                   "quantidadePassageiros": 1,
                   "origemEmbarque": {"descricao": "Bodocongó", "latitude": -7.2200000, "longitude": -35.9100000}
                 }
-                """.formatted(caronaId);
+                """.replace("__CARONA_ID__", String.valueOf(caronaId));
 
         String respostaReserva = mockMvc.perform(post("/reservas")
                         .header("Authorization", tokenPassageiro)

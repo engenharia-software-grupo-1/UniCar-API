@@ -86,7 +86,7 @@ public class AvaliacaoService {
 
         return new ReputacaoDTO(
                 usuario.getId(),
-                media == null ? 0.0 : media,
+                media == null ? Double.valueOf(0.0) : media,
                 quantidade
         );
     }
