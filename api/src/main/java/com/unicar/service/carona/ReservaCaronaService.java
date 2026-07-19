@@ -23,9 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +42,12 @@ public class ReservaCaronaService {
     @Value("${unicar.reserva.tolerancia-trajeto-km:3.0}")
     private BigDecimal toleranciaTrajetoKm;
 
+    @Value("${unicar.reserva.prazo-resposta:24h}")
+    private Duration prazoResposta;
+
+    @Value("${unicar.reserva.antecedencia-minima-partida:1h}")
+    private Duration antecedenciaMinimaPartida;
+
     @Transactional
     public ReservaResponseDTO solicitar(ReservaRequestDTO request, Long usuarioId) {
         Carona carona = buscarCaronaParaAtualizacao(request.caronaId());
@@ -53,6 +59,9 @@ public class ReservaCaronaService {
         if (carona.getStatus() != StatusCarona.CRIADA) {
             throw new EstadoInvalidoException("Apenas caronas com status CRIADA podem receber novas reservas");
         }
+
+        LocalDateTime dataReserva = LocalDateTime.now();
+        LocalDateTime dataExpiracao = calcularDataExpiracao(carona, dataReserva);
 
         int vagasOcupadas = repository.somarPassageirosPorCaronaEStatus(carona.getId(), StatusReserva.ACEITA);
         int vagasDisponiveis = carona.getVagasTotais() - vagasOcupadas;
@@ -79,8 +88,8 @@ public class ReservaCaronaService {
                 .origemEmbarqueLongitude(request.origemEmbarque().longitude())
                 .valorContribuicao(valorContribuicao)
                 .status(StatusReserva.PENDENTE)
-                .dataExpiracao(carona.getDataHoraPartida().minusHours(1))
-                .dataReserva(LocalDateTime.now())
+                .dataExpiracao(dataExpiracao)
+                .dataReserva(dataReserva)
                 .build();
 
         reserva = repository.save(reserva);
@@ -93,7 +102,7 @@ public class ReservaCaronaService {
         notificacaoService.dispararNotificacaoSistemica(
                 carona.getMotorista(),
                 "Nova solicitação de reserva",
-                NotificacaoTemplates.novaSolicitacaoReserva(usuario, carona),
+                NotificacaoTemplates.novaSolicitacaoReserva(usuario, carona, dataExpiracao),
                 TipoNotificacao.RESERVA_CRIADA
         );
 
@@ -108,6 +117,7 @@ public class ReservaCaronaService {
         if (reserva.getStatus() != StatusReserva.PENDENTE) {
             throw new EstadoInvalidoException("Apenas reservas PENDENTES podem ser aceitas");
         }
+        validarPrazoResposta(reserva);
 
         Carona carona = buscarCaronaParaAtualizacao(reserva.getCarona().getId());
         int vagasOcupadas = repository.somarPassageirosPorCaronaEStatus(carona.getId(), StatusReserva.ACEITA);
@@ -138,6 +148,7 @@ public class ReservaCaronaService {
         if (reserva.getStatus() != StatusReserva.PENDENTE) {
             throw new EstadoInvalidoException("Apenas reservas PENDENTES podem ser recusadas");
         }
+        validarPrazoResposta(reserva);
 
         reserva.setStatus(StatusReserva.RECUSADA);
         reserva.setDataResposta(LocalDateTime.now());
@@ -163,6 +174,10 @@ public class ReservaCaronaService {
         }
 
         StatusReserva status = reserva.getStatus();
+        if (status == StatusReserva.PENDENTE) {
+            validarPrazoResposta(reserva);
+        }
+
         if (status == StatusReserva.CONCLUIDA) {
             throw new EstadoInvalidoException("Não é possível cancelar uma reserva finalizada");
         }
@@ -196,6 +211,9 @@ public class ReservaCaronaService {
 
         if (reserva.getStatus() != StatusReserva.PENDENTE && reserva.getStatus() != StatusReserva.ACEITA) {
             throw new EstadoInvalidoException("Não é possível remover uma reserva com status " + reserva.getStatus());
+        }
+        if (reserva.getStatus() == StatusReserva.PENDENTE) {
+            validarPrazoResposta(reserva);
         }
 
         reserva.setStatus(StatusReserva.CANCELADA);
@@ -291,6 +309,24 @@ public class ReservaCaronaService {
                 .multiply(proporcaoTrecho)
                 .multiply(BigDecimal.valueOf(quantidadePassageiros))
                 .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private LocalDateTime calcularDataExpiracao(Carona carona, LocalDateTime dataReserva) {
+        LocalDateTime limiteAntesDaPartida = carona.getDataHoraPartida().minus(antecedenciaMinimaPartida);
+        if (!limiteAntesDaPartida.isAfter(dataReserva)) {
+            throw new EstadoInvalidoException("O prazo para solicitar reservas para esta carona foi encerrado");
+        }
+
+        LocalDateTime limiteDeResposta = dataReserva.plus(prazoResposta);
+        return limiteDeResposta.isBefore(limiteAntesDaPartida)
+                ? limiteDeResposta
+                : limiteAntesDaPartida;
+    }
+
+    private void validarPrazoResposta(ReservaCarona reserva) {
+        if (!reserva.getDataExpiracao().isAfter(LocalDateTime.now())) {
+            throw new EstadoInvalidoException("O prazo de resposta da reserva expirou");
+        }
     }
 
     private Carona buscarCarona(Long caronaId) {
