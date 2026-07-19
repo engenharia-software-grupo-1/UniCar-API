@@ -342,6 +342,10 @@ public class CaronaService {
         }
     }
 
+    public long contaCaronasParticipadas(Long idUsuario){
+        return caronaRepository.countByMotoristaIdAndStatus(idUsuario, StatusCarona.FINALIZADA) + reservaCaronaRepository.countByUsuarioIdAndStatus(idUsuario, StatusReserva.CONCLUIDA);
+    }
+
     private Carona buscarCaronaParaAtualizacao(Long id) {
         return caronaRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new CaronaNaoEncontradaException("Carona não encontrada: id=" + id));

@@ -7,6 +7,7 @@ import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
 import com.unicar.dto.usuario.UsuarioDTO;
 import com.unicar.enums.Genero;
 import com.unicar.repository.UsuarioRepository;
+import com.unicar.service.carona.CaronaService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -41,6 +42,9 @@ class UsuarioServiceTest {
 
     @Mock
     private AvaliacaoService avaliacaoService;
+
+    @Mock
+    private CaronaService caronaService;
 
     private Usuario usuario;
 

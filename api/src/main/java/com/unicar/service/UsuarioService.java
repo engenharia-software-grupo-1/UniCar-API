@@ -7,6 +7,7 @@ import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
 import com.unicar.dto.usuario.UsuarioDTO;
 import com.unicar.repository.UsuarioRepository;
 
+import com.unicar.service.carona.CaronaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +21,7 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final AvaliacaoService avaliacaoService;
+    private final CaronaService caronaService;
 
     public UsuarioDTO buscarPerfil(Long usuarioId) {
         return UsuarioDTO.from(buscarUsuarioAtivo(usuarioId));
@@ -39,7 +41,8 @@ public class UsuarioService {
                 usuario.getLinkFoto(),
                 reputacao.media(),
                 reputacao.quantidadeAvaliacoes().intValue(),
-                avaliacaoService.listarAvaliacoesRecebidas(id)
+                avaliacaoService.listarAvaliacoesRecebidas(id),
+                caronaService.contaCaronasParticipadas(usuario.getId())
         );
     }
 

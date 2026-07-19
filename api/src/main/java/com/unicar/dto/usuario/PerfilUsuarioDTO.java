@@ -12,7 +12,8 @@ public record PerfilUsuarioDTO(
         String linkFoto,
         double reputacao,
         int quantidadeAvaliacoes,
-        List<AvaliacaoRecebidaDTO> avaliacoes
+        List<AvaliacaoRecebidaDTO> avaliacoes,
+        long quantidadeCaronas
 ) {
     public PerfilUsuarioDTO(Long id,
                             String nome,
@@ -21,6 +22,6 @@ public record PerfilUsuarioDTO(
                             String linkFoto,
                             double reputacao,
                             int quantidadeAvaliacoes){
-        this(id, nome, curso, genero, linkFoto, reputacao, quantidadeAvaliacoes, List.of());
+        this(id, nome, curso, genero, linkFoto, reputacao, quantidadeAvaliacoes, List.of(), 0);
     }
 }

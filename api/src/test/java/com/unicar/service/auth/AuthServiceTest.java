@@ -373,7 +373,7 @@ class AuthServiceTest {
                       "matricula_do_estudante": "2023001",
                       "nome_do_curso": "Ciência da Computação",
                       "sexo": "F",
-                      "cpf": "123456"
+                      "cpf": "123456789012"
                     }
                     """, MediaType.APPLICATION_JSON));
 

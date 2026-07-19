@@ -52,4 +52,9 @@ public interface ReservaCaronaRepository extends JpaRepository<ReservaCarona, Lo
             "AND c.status = com.unicar.enums.StatusCarona.FINALIZADA " +
             "ORDER BY c.dataHoraPartida DESC")
     Page<ReservaCarona> findHistoricoComoPassageiro(@Param("passageiroId") Long passageiroId, Pageable pageable);
+
+    long countByUsuarioIdAndStatus(
+            Long usuarioId,
+            StatusReserva status
+    );
 }
