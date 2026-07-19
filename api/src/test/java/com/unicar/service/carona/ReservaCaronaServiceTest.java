@@ -28,6 +28,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -262,6 +264,67 @@ class ReservaCaronaServiceTest {
 
             assertThrows(CaronaNaoEncontradaException.class, () ->
                     service.solicitar(request, usuarioId));
+        }
+
+        @ParameterizedTest(name = "solicitados={0} -> aceita={1}")
+        @CsvSource({
+                "1,true",
+                "2,true",
+                "3,false"
+        })
+        @DisplayName("Deve validar limite de vagas disponíveis ao solicitar reserva")
+        void vagasLimiteDeSolicitacao(int quantidadePassageiros, boolean deveSerAceita) {
+            when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(2);
+
+            ReservaRequestDTO request = criarRequest(EMBARQUE_COMPATIVEL_LAT, EMBARQUE_COMPATIVEL_LON, quantidadePassageiros);
+
+            if (deveSerAceita) {
+                when(repository.existsByCarona_IdAndUsuario_IdAndStatusIn(eq(caronaId), eq(usuarioId), anyList()))
+                        .thenReturn(false);
+                when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+                when(repository.save(any(ReservaCarona.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                assertDoesNotThrow(() -> service.solicitar(request, usuarioId));
+            } else {
+                assertThrows(RegraDeNegocioException.class, () -> service.solicitar(request, usuarioId));
+                verify(repository, never()).save(any());
+            }
+        }
+
+        @ParameterizedTest(name = "delta={0} -> aceita={1}")
+        @CsvSource({
+                "-0.01,false",
+                "0.00,true",
+                "0.01,true"
+        })
+        @DisplayName("Deve validar tolerância do desvio de trajeto no embarque")
+        void toleranciaLimiteDeDesvio(double delta, boolean deveSerAceita) {
+            BigDecimal distanciaTotal = GeoUtils.calcularDistanciaKm(ORIGEM_LAT, ORIGEM_LON, DESTINO_LAT, DESTINO_LON);
+            BigDecimal distanciaOrigemEmbarque = GeoUtils.calcularDistanciaKm(
+                    ORIGEM_LAT, ORIGEM_LON, EMBARQUE_INCOMPATIVEL_LAT, EMBARQUE_INCOMPATIVEL_LON);
+            BigDecimal distanciaEmbarqueDestino = GeoUtils.calcularDistanciaKm(
+                    EMBARQUE_INCOMPATIVEL_LAT, EMBARQUE_INCOMPATIVEL_LON, DESTINO_LAT, DESTINO_LON);
+            BigDecimal desvio = distanciaOrigemEmbarque.add(distanciaEmbarqueDestino).subtract(distanciaTotal);
+
+            ReflectionTestUtils.setField(service, "toleranciaTrajetoKm", desvio.add(BigDecimal.valueOf(delta)));
+
+            when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
+
+            ReservaRequestDTO request = criarRequest(EMBARQUE_INCOMPATIVEL_LAT, EMBARQUE_INCOMPATIVEL_LON, 1);
+
+            if (deveSerAceita) {
+                when(repository.existsByCarona_IdAndUsuario_IdAndStatusIn(eq(caronaId), eq(usuarioId), anyList()))
+                        .thenReturn(false);
+                when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+                when(repository.save(any(ReservaCarona.class))).thenAnswer(inv -> inv.getArgument(0));
+
+                assertDoesNotThrow(() -> service.solicitar(request, usuarioId));
+            } else {
+                assertThrows(RegraDeNegocioException.class, () -> service.solicitar(request, usuarioId));
+                verify(repository, never()).save(any());
+            }
         }
     }
 
