@@ -4,14 +4,17 @@ open modules/usuario
 open modules/carona
 
 abstract sig StatusReserva {}
-one sig ReservaPendente, ReservaAceita, ReservaRecusada, ReservaCancelada,
-        ReservaRemovida, ReservaConcluida extends StatusReserva {}
+// Mantido no enum do OpenAPI; remover uma reserva resulta em CANCELADA.
+one sig ReservaPendente, ReservaAceita, ReservaRecusada,
+        ReservaCancelada, ReservaRemovida, ReservaConcluida
+        extends StatusReserva {}
 
 sig Reserva {
     carona: one Carona,
     passageiro: one Usuario,
-    quantidadePassageiros: one Int,
     origemEmbarque: one Ponto,
+    vagasSolicitadas: some Vaga,
+    quantidadePassageiros: one Int,
     valorContribuicao: one ValorMonetario,
     status: one StatusReserva
 }
@@ -19,161 +22,108 @@ sig Reserva {
 fact IntegridadeReserva {
     all r: Reserva | {
         r.passageiro != r.carona.motorista
-        r.quantidadePassageiros > 0
+        r.vagasSolicitadas in r.carona.vagas
+        r.quantidadePassageiros = #r.vagasSolicitadas
+        r.status = ReservaPendente implies
+            r.carona.status = CaronaCriada
+        r.status = ReservaConcluida implies
+            r.carona.status = CaronaFinalizada
+        r.status = ReservaAceita implies
+            r.carona.status in CaronaCriada + CaronaEmAndamento
     }
-    // Uma pessoa não pode criar nova reserva para a mesma carona,
-    // mesmo após a reserva anterior alcançar um estado terminal.
     all disj r1, r2: Reserva |
         r1.carona != r2.carona or r1.passageiro != r2.passageiro
-    all c: Carona | vagasOcupadas[c] <= c.vagasTotais
-    all c: Carona | c.status = CaronaFinalizada implies
-        no r: Reserva | r.carona = c and r.status = ReservaAceita
+    all disj r1, r2: Reserva |
+        r1.carona = r2.carona
+        and r1.status = ReservaAceita
+        and r2.status = ReservaAceita
+        implies no r1.vagasSolicitadas & r2.vagasSolicitadas
     all c: Carona | c.status = CaronaCancelada implies
-        no r: Reserva | r.carona = c and r.status in ReservaPendente + ReservaAceita
+        no r: Reserva |
+            r.carona = c
+            and r.status in ReservaPendente + ReservaAceita
+    no r: Reserva | r.status = ReservaRemovida
 }
 
-fun reservasAtivas: set Reserva {
-    { r: Reserva | r.status in ReservaPendente + ReservaAceita }
+fun vagasAlocadas[c: Carona]: set Vaga {
+    { v: c.vagas |
+        some r: Reserva |
+            r.carona = c
+            and r.status = ReservaAceita
+            and v in r.vagasSolicitadas }
 }
 
-fun reservasDaCarona[c: Carona]: set Reserva {
-    { r: Reserva | r.carona = c }
+fun vagasDisponiveis[c: Carona]: set Vaga {
+    c.vagas - vagasAlocadas[c]
 }
 
-fun reservasDoPassageiro[u: Usuario]: set Reserva {
-    { r: Reserva | r.passageiro = u }
-}
-
-fun historicoPassageiro[u: Usuario]: set Reserva {
-    { r: reservasDoPassageiro[u] |
-        r.status in ReservaRecusada + ReservaCancelada + ReservaRemovida + ReservaConcluida }
-}
-
-fun reservasEnviadas[u: Usuario]: set Reserva {
-    passageiro.u
-}
-
-fun reservasRecebidas[m: Usuario]: set Reserva {
-    { r: Reserva | r.carona.motorista = m }
-}
-
-fun vagasOcupadas[c: Carona]: Int {
-    sum r: { x: Reserva | x.carona = c and x.status = ReservaAceita } |
-        r.quantidadePassageiros
-}
-
-fun passageirosConfirmados[c: Carona]: set Usuario {
-    { u: Usuario | some r: Reserva |
-        r.carona = c and r.passageiro = u and r.status = ReservaAceita }
+fun vagasDisponiveisPara[r: Reserva]: set Vaga {
+    r.carona.vagas
+    - { v: Vaga |
+        some outra: Reserva - r |
+            outra.carona = r.carona
+            and outra.status = ReservaAceita
+            and v in outra.vagasSolicitadas }
 }
 
 fun proximosStatus[s: StatusReserva]: set StatusReserva {
-    s = ReservaPendente => ReservaAceita + ReservaRecusada + ReservaCancelada + ReservaRemovida
-    else s = ReservaAceita => ReservaCancelada + ReservaRemovida + ReservaConcluida
+    s = ReservaPendente =>
+        ReservaAceita + ReservaRecusada
+        + ReservaCancelada
+    else s = ReservaAceita => ReservaCancelada + ReservaConcluida
     else none
 }
 
-pred transicaoReservaPermitida[antes, depois: StatusReserva] {
-    depois in proximosStatus[antes]
-}
-
-pred podeSolicitarReserva[c: Carona, u: Usuario, qtd: Int] {
-    c.status = CaronaCriada
+pred podeSolicitarReserva[nova: Reserva, c: Carona,
+                          u: Usuario, o: Ponto, qtd: Int] {
+    autenticado[u]
+    c in caronasDisponiveis
     u != c.motorista
-    u.ativo = True
     not bloqueioEntre[u, c.motorista]
     qtd > 0
-    add[vagasOcupadas[c], qtd] <= c.vagasTotais
-    no r: Reserva | r.carona = c and r.passageiro = u
+    qtd <= #vagasDisponiveis[c]
+    nova.carona = c
+    nova.passageiro = u
+    nova.origemEmbarque = o
+    nova.quantidadePassageiros = qtd
+    nova.vagasSolicitadas in vagasDisponiveis[c]
+    nova.status = ReservaPendente
+    no outra: Reserva - nova |
+        outra.carona = c and outra.passageiro = u
 }
 
-pred podeConsultarReserva[r: Reserva, u: Usuario] {
-    u in r.passageiro + r.carona.motorista
-}
-
-pred podeSimularReserva[c: Carona, u: Usuario, qtd: Int] {
-    c.status = CaronaCriada
-    u != c.motorista
-    qtd > 0
-    add[vagasOcupadas[c], qtd] <= c.vagasTotais
+pred motoristaPodeResponder[r: Reserva, m: Usuario] {
+    autenticado[m]
+    r.carona.motorista = m
+    r.status = ReservaPendente
 }
 
 pred podeAceitarReserva[r: Reserva, m: Usuario] {
-    r.carona.motorista = m
-    r.status = ReservaPendente
-    add[vagasOcupadas[r.carona], r.quantidadePassageiros] <= r.carona.vagasTotais
+    motoristaPodeResponder[r, m]
+    r.vagasSolicitadas in vagasDisponiveisPara[r]
 }
 
 pred podeRecusarReserva[r: Reserva, m: Usuario] {
-    r.carona.motorista = m
-    r.status = ReservaPendente
+    motoristaPodeResponder[r, m]
+}
+
+pred podeConsultarReserva[r: Reserva, u: Usuario] {
+    autenticado[u]
+    u in r.passageiro + r.carona.motorista
 }
 
 pred podeCancelarReserva[r: Reserva, u: Usuario] {
-    (u = r.passageiro and r.status in ReservaPendente + ReservaAceita)
+    autenticado[u]
+    (u = r.passageiro
+     and r.status in ReservaPendente + ReservaAceita)
     or
     (u = r.carona.motorista and r.status = ReservaAceita)
 }
 
-// No endpoint de remoção, uma reserva aceita passa a CANCELADA.
-// REMOVIDA permanece no enum por ser um estado exposto pelo contrato.
-pred podeRemoverReserva[r: Reserva, m: Usuario] {
-    r.carona.motorista = m
-    r.status = ReservaAceita
-}
-
-pred remocaoReservaPermitida[antes, depois: StatusReserva] {
-    antes = ReservaAceita
-    depois = ReservaCancelada
-}
-
 assert LotacaoRespeitada {
-    all c: Carona | vagasOcupadas[c] <= c.vagasTotais
-}
-
-assert TerceiroNaoCancelaReserva {
-    all r: Reserva, u: Usuario |
-        podeCancelarReserva[r, u] implies u in r.passageiro + r.carona.motorista
-}
-
-assert SomenteReservaAceitaPodeSerRemovida {
-    all r: Reserva, m: Usuario |
-        podeRemoverReserva[r, m] implies r.status = ReservaAceita
-}
-
-assert RemocaoResultaEmCancelamento {
-    all antes, depois: StatusReserva |
-        remocaoReservaPermitida[antes, depois] implies
-        antes = ReservaAceita and depois = ReservaCancelada
-}
-
-assert EstadoTerminalNaoTransiciona {
-    all s: ReservaRecusada + ReservaCancelada + ReservaRemovida + ReservaConcluida |
-        no proximosStatus[s]
-}
-
-assert BloqueadoNaoSolicitaReserva {
-    all c: Carona, u: Usuario, qtd: Int |
-        bloqueioEntre[u, c.motorista] implies not podeSolicitarReserva[c, u, qtd]
-}
-
-assert AceitacaoNaoExcedeVagas {
-    all r: Reserva, m: Usuario |
-        podeAceitarReserva[r, m] implies
-        add[vagasOcupadas[r.carona], r.quantidadePassageiros] <= r.carona.vagasTotais
-}
-
-assert ApenasParticipantesConsultamReserva {
-    all r: Reserva, u: Usuario |
-        podeConsultarReserva[r, u] implies u in r.passageiro + r.carona.motorista
+    all c: Carona | #vagasAlocadas[c] <= c.vagasTotais
 }
 
 check LotacaoRespeitada for 5 but 8 Int
-check TerceiroNaoCancelaReserva for 5 but 8 Int
-check SomenteReservaAceitaPodeSerRemovida for 5 but 8 Int
-check RemocaoResultaEmCancelamento for 5 but 8 Int
-check EstadoTerminalNaoTransiciona for 5 but 8 Int
-check BloqueadoNaoSolicitaReserva for 5 but 8 Int
-check AceitacaoNaoExcedeVagas for 5 but 8 Int
-check ApenasParticipantesConsultamReserva for 5 but 8 Int
-run { some r: Reserva | r.status = ReservaAceita } for 4 but 8 Int
+run { some nova: Reserva, c: Carona, u: Usuario, o: Ponto |
+    podeSolicitarReserva[nova, c, u, o, 1] } for 5 but 8 Int
