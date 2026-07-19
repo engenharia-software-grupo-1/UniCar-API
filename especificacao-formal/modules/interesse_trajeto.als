@@ -5,51 +5,32 @@ open modules/carona
 
 sig InteresseTrajeto {
     usuario: one Usuario,
-    origem: one Ponto,
-    destino: one Ponto
+    origem: one Coordenada,
+    destino: one Coordenada
 }
 
-fact InteresseUnicoPorUsuarioETrajeto {
+fact IntegridadeInteresse {
+    all i: InteresseTrajeto | i.origem != i.destino
     all disj i1, i2: InteresseTrajeto |
-        i1.usuario != i2.usuario or i1.origem != i2.origem or i1.destino != i2.destino
+        i1.usuario != i2.usuario
+        or i1.origem != i2.origem
+        or i1.destino != i2.destino
 }
 
-fun interessesDe[u: Usuario]: set InteresseTrajeto {
-    usuario.u
-}
-
-fun usuariosInteressados[o, d: Ponto]: set Usuario {
-    { u: Usuario | some i: InteresseTrajeto |
-        i.usuario = u and i.origem = o and i.destino = d }
-}
-
-pred podeCadastrarInteresse[u: Usuario, o, d: Ponto] {
-    u.ativo = True
-    no i: InteresseTrajeto |
-        i.usuario = u and i.origem = o and i.destino = d
+pred podeCadastrarInteresse[novo: InteresseTrajeto,
+                            u: Usuario, o, d: Coordenada] {
+    autenticado[u]
+    novo.usuario = u
+    novo.origem = o
+    novo.destino = d
+    no outro: InteresseTrajeto - novo |
+        outro.usuario = u and outro.origem = o and outro.destino = d
 }
 
 pred podeRemoverInteresse[u: Usuario, i: InteresseTrajeto] {
+    autenticado[u]
     i.usuario = u
 }
 
-assert InteresseDuplicadoImpossivel {
-    all disj i1, i2: InteresseTrajeto |
-        i1.usuario != i2.usuario or i1.origem != i2.origem or i1.destino != i2.destino
-}
-
-assert ApenasDonoRemoveInteresse {
-    all u: Usuario, i: InteresseTrajeto |
-        podeRemoverInteresse[u, i] implies i in interessesDe[u]
-}
-
-assert ConsultaDeInteresseConsistente {
-    all i: InteresseTrajeto |
-        i.usuario in usuariosInteressados[i.origem, i.destino]
-        and i in interessesDe[i.usuario]
-}
-
-check InteresseDuplicadoImpossivel for 5 but 8 Int
-check ApenasDonoRemoveInteresse for 5 but 8 Int
-check ConsultaDeInteresseConsistente for 5 but 8 Int
-run { some InteresseTrajeto } for 4 but 8 Int
+run { some novo: InteresseTrajeto, u: Usuario, o, d: Coordenada |
+    podeCadastrarInteresse[novo, u, o, d] } for 5

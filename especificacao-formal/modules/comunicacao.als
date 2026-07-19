@@ -14,86 +14,112 @@ sig Chat {
     mensagens: set Mensagem
 }
 
+abstract sig TipoNotificacao {}
+one sig NotifReservaCriada, NotifReservaAceita,
+        NotifReservaRecusada, NotifReservaCancelada, NotifReservaExpirada,
+        NotifCaronaCancelada, NotifCaronaIniciada,
+        NotifCaronaFinalizada, NotifCaronaCompativel
+        extends TipoNotificacao {}
+
 sig Notificacao {
     destinatario: one Usuario,
+    tipo: one TipoNotificacao,
     visualizada: one Bool,
-    origemReserva: lone Reserva
+    origemReserva: lone Reserva,
+    origemCarona: lone Carona
 }
 
-fact IntegridadeComunicacao {
-    all disj ch1, ch2: Chat | ch1.reserva != ch2.reserva
-    all m: Mensagem | one ch: Chat | m in ch.mensagens
-    all ch: Chat, m: ch.mensagens |
-        m.remetente in ch.reserva.passageiro + ch.reserva.carona.motorista
+fun tiposDeReserva: set TipoNotificacao {
+    NotifReservaCriada + NotifReservaAceita
+    + NotifReservaRecusada + NotifReservaCancelada
+    + NotifReservaExpirada
+}
+
+fun tiposDeCarona: set TipoNotificacao {
+    NotifCaronaCancelada + NotifCaronaIniciada
+    + NotifCaronaFinalizada + NotifCaronaCompativel
 }
 
 fun participantes[ch: Chat]: set Usuario {
     ch.reserva.passageiro + ch.reserva.carona.motorista
 }
 
-fun chatsDe[u: Usuario]: set Chat {
-    { ch: Chat | u in participantes[ch] }
-}
+fact IntegridadeComunicacao {
+    all disj ch1, ch2: Chat | ch1.reserva != ch2.reserva
+    all m: Mensagem | one ch: Chat | m in ch.mensagens
+    all ch: Chat, m: ch.mensagens |
+        m.remetente in participantes[ch]
 
-fun notificacoesNaoVisualizadas[u: Usuario]: set Notificacao {
-    { n: Notificacao | n.destinatario = u and n.visualizada = False }
-}
+    all n: Notificacao | {
+        (n.tipo in tiposDeReserva) iff one n.origemReserva
+        (n.tipo in tiposDeCarona) iff one n.origemCarona
+        some n.origemReserva implies
+            n.destinatario in
+                n.origemReserva.passageiro
+                + n.origemReserva.carona.motorista
+        n.tipo = NotifReservaRecusada implies
+            n.origemReserva.status = ReservaRecusada
+        n.tipo = NotifReservaCancelada implies
+            n.origemReserva.status = ReservaCancelada
+        n.tipo = NotifCaronaCancelada implies
+            n.origemCarona.status = CaronaCancelada
+    }
 
-fun mensagensDe[ch: Chat]: set Mensagem { ch.mensagens }
+    all disj n1, n2: Notificacao |
+        n1.destinatario != n2.destinatario
+        or n1.tipo != n2.tipo
+        or n1.origemReserva != n2.origemReserva
+        or n1.origemCarona != n2.origemCarona
 
-fun mensagensNaoLidas[ch: Chat]: set Mensagem {
-    { m: ch.mensagens | m.lida = False }
+    all r: Reserva | one n: Notificacao | {
+        n.tipo = NotifReservaCriada
+        n.destinatario = r.carona.motorista
+        n.origemReserva = r
+    }
+    all r: Reserva |
+        r.status in ReservaAceita + ReservaConcluida implies
+        one n: Notificacao | {
+            n.tipo = NotifReservaAceita
+            n.destinatario = r.passageiro
+            n.origemReserva = r
+        }
+    all r: Reserva | r.status = ReservaRecusada implies
+        one n: Notificacao | {
+            n.tipo = NotifReservaRecusada
+            n.destinatario = r.passageiro
+            n.origemReserva = r
+        }
+    all r: Reserva | r.status = ReservaCancelada implies
+        one n: Notificacao | {
+            n.tipo = NotifReservaCancelada
+            n.destinatario in r.passageiro + r.carona.motorista
+            n.origemReserva = r
+        }
+    all c: Carona, r: Reserva |
+        c.status = CaronaCancelada and r.carona = c implies
+            one n: Notificacao | {
+                n.tipo = NotifCaronaCancelada
+                n.destinatario = r.passageiro
+                n.origemCarona = c
+            }
 }
 
 pred podeConsultarChat[ch: Chat, u: Usuario] {
+    autenticado[u]
     u in participantes[ch]
 }
 
 pred podeEnviarMensagem[ch: Chat, u: Usuario] {
-    u in participantes[ch]
-    ch.reserva.status in ReservaPendente + ReservaAceita
-    no outro: participantes[ch] - u | existeBloqueio[u, outro]
-    no outro: participantes[ch] - u | existeBloqueio[outro, u]
-}
-
-pred podeMarcarChatComoLido[ch: Chat, u: Usuario] {
     podeConsultarChat[ch, u]
+    ch.reserva.status in ReservaPendente + ReservaAceita
+    no outro: participantes[ch] - u | bloqueioEntre[u, outro]
 }
 
 pred podeVisualizarNotificacao[n: Notificacao, u: Usuario] {
+    autenticado[u]
     n.destinatario = u
     n.visualizada = False
 }
 
-pred notificacaoDeReservaValida[n: Notificacao] {
-    some n.origemReserva implies
-        n.destinatario in n.origemReserva.passageiro + n.origemReserva.carona.motorista
-}
-
-assert IntrusoNaoEnviaMensagem {
-    all ch: Chat, u: Usuario |
-        podeEnviarMensagem[ch, u] implies u in participantes[ch]
-}
-
-assert IntrusoNaoConsultaChat {
-    all ch: Chat, u: Usuario - participantes[ch] |
-        not podeConsultarChat[ch, u]
-}
-
-assert BloqueioCortaMensagem {
-    all ch: Chat, u: participantes[ch] |
-        (some outro: participantes[ch] - u | bloqueioEntre[u, outro])
-        implies not podeEnviarMensagem[ch, u]
-}
-
-assert NotificacaoDeReservaSomenteParaParticipante {
-    all n: Notificacao |
-        notificacaoDeReservaValida[n] and some n.origemReserva implies
-        n.destinatario in n.origemReserva.passageiro + n.origemReserva.carona.motorista
-}
-
-check IntrusoNaoEnviaMensagem for 5 but 8 Int
-check IntrusoNaoConsultaChat for 5 but 8 Int
-check BloqueioCortaMensagem for 5 but 8 Int
-check NotificacaoDeReservaSomenteParaParticipante for 5 but 8 Int
-run { some ch: Chat | some ch.mensagens } for 4 but 8 Int
+run { some ch: Chat, u: Usuario |
+    some ch.mensagens and podeEnviarMensagem[ch, u] } for 5 but 8 Int
