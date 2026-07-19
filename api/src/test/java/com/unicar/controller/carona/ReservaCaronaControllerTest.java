@@ -33,6 +33,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -194,10 +195,16 @@ class ReservaCaronaControllerTest {
                     new ReservaRecebidaResponseDTO(
                             50L,
                             new UsuarioResumoDTO(5L, "Maria Oliveira"),
-                            new EnderecoDTO("Rua Aprígio Veloso", new BigDecimal("-7.22"), new BigDecimal("-35.91")),
+                            new EnderecoDTO(
+                                    "Rua Aprígio Veloso",
+                                    new BigDecimal("-7.22"),
+                                    new BigDecimal("-35.91")
+                            ),
                             2,
                             new BigDecimal("8.00"),
-                            StatusReserva.PENDENTE)
+                            StatusReserva.PENDENTE,
+                            LocalDateTime.now()
+                    )
             );
 
             when(reservaCaronaService.listarRecebidas(USUARIO_ID)).thenReturn(reservas);
