@@ -376,7 +376,7 @@ public class AuthService {
 
         String digitos = cpf.replaceAll("\\D", "");
 
-        if (digitos.length() < TAMANHO_CPF - 1 || digitos.length() > TAMANHO_CPF) {
+        if (digitos.length() > TAMANHO_CPF) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_GATEWAY,
                     "O CPF retornado pelo Eureca é inválido."
