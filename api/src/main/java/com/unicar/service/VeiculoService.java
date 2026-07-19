@@ -40,7 +40,6 @@ public class VeiculoService {
             .cor(request.cor())
             .tipoVeiculo(request.tipoVeiculo())
             .build();
-
         validarPlacar(veiculo.getPlaca());
 
         return VeiculoResponseDTO.from(veiculoRepository.save(veiculo));

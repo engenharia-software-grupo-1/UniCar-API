@@ -2,6 +2,7 @@ package com.unicar.util.notificacoes;
 
 import com.unicar.domain.Carona;
 import com.unicar.domain.Usuario;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public final class NotificacaoTemplates {
@@ -9,7 +10,13 @@ public final class NotificacaoTemplates {
     private NotificacaoTemplates() {
     }
 
-    public static String novaSolicitacaoReserva(Usuario passageiro, Carona carona) {
+    public static String novaSolicitacaoReserva(
+            Usuario passageiro,
+            Carona carona,
+            LocalDateTime dataExpiracao
+    ) {
+        String prazoFormatado = dataExpiracao.format(DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm"));
+
         return """
                 <h1>Nova solicitação de reserva</h1>
                 
@@ -27,7 +34,7 @@ public final class NotificacaoTemplates {
                 <p>Para dar continuidade, acesse o <strong>UniCar</strong> e analise a solicitação. Você poderá <strong>aceitá-la</strong> ou <strong>recusá-la</strong> conforme sua disponibilidade.</p>
                 
                 <blockquote style="border-left: 4px solid #ccc; padding-left: 10px; color: #666; margin: 20px 0;">
-                    Enquanto a solicitação não for analisada, a reserva permanecerá pendente.
+                    Responda até <strong>%s</strong>. Após esse prazo, a solicitação expirará automaticamente.
                 </blockquote>
                 
                 <p>Atenciosamente,</p>
@@ -35,7 +42,8 @@ public final class NotificacaoTemplates {
                 <p><strong>Equipe UniCar</strong></p>
                 """.formatted(
                 passageiro.getNome(),
-                carona.getDestinoDescricao()
+                carona.getDestinoDescricao(),
+                prazoFormatado
         );
     }
 
@@ -89,6 +97,22 @@ public final class NotificacaoTemplates {
                 
                 <p>Atenciosamente,</p>
                 
+                <p><strong>Equipe UniCar</strong></p>
+                """.formatted(carona.getDestinoDescricao());
+    }
+
+    public static String reservaExpirada(Carona carona) {
+        return """
+                <h1>Reserva expirada</h1>
+
+                <p>Olá!</p>
+
+                <p>Sua solicitação de reserva para a carona com destino a <strong>%s</strong> expirou sem uma resposta do motorista.</p>
+
+                <p>Você pode acessar o <strong>UniCar</strong> para buscar outras caronas disponíveis.</p>
+
+                <p>Atenciosamente,</p>
+
                 <p><strong>Equipe UniCar</strong></p>
                 """.formatted(carona.getDestinoDescricao());
     }

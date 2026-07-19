@@ -29,6 +29,11 @@ unicar:
   jwt:
     secret: ${JWT_SECRET:ZGV2LXNlY3JldC1rZXktZm9yLWxvY2FsLWRldmVsb3BtZW50}
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  reserva:
+    prazo-resposta: ${RESERVA_PRAZO_RESPOSTA:24h}
+    antecedencia-minima-partida: ${RESERVA_ANTECEDENCIA_MINIMA_PARTIDA:1h}
+    expiracao:
+      intervalo-ms: ${RESERVA_EXPIRACAO_INTERVALO_MS:60000}
 
 eureca:
   url:

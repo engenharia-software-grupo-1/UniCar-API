@@ -13,6 +13,7 @@ import com.unicar.dto.carona.ReservaSimulacaoResponseDTO;
 import com.unicar.dto.carona.ReservaStatusResponseDTO;
 import com.unicar.enums.StatusCarona;
 import com.unicar.enums.StatusReserva;
+import com.unicar.enums.TipoNotificacao;
 import com.unicar.exception.AcessoNegadoException;
 import com.unicar.exception.CaronaNaoEncontradaException;
 import com.unicar.exception.EstadoInvalidoException;
@@ -39,6 +40,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -92,6 +94,8 @@ class ReservaCaronaServiceTest {
     @BeforeEach
     void setup() {
         ReflectionTestUtils.setField(service, "toleranciaTrajetoKm", new BigDecimal("3.0"));
+        ReflectionTestUtils.setField(service, "prazoResposta", Duration.ofHours(24));
+        ReflectionTestUtils.setField(service, "antecedenciaMinimaPartida", Duration.ofHours(1));
 
         usuario = new Usuario();
         usuario.setId(usuarioId);
@@ -119,6 +123,7 @@ class ReservaCaronaServiceTest {
         reserva.setId(reservaId);
         reserva.setUsuario(usuario);
         reserva.setCarona(carona);
+        reserva.setDataExpiracao(LocalDateTime.now().plusHours(2));
     }
 
     private ReservaRequestDTO criarRequest(BigDecimal embarqueLat, BigDecimal embarqueLon, int quantidadePassageiros) {
@@ -168,6 +173,73 @@ class ReservaCaronaServiceTest {
             assertEquals(carona, salva.getCarona());
             assertEquals(usuario, salva.getUsuario());
             assertEquals(StatusReserva.PENDENTE, salva.getStatus());
+        }
+
+        @Test
+        @DisplayName("Deve conceder o prazo completo de resposta quando a carona estiver distante")
+        void deveUsarPrazoCompletoDeResposta() {
+            carona.setDataHoraPartida(LocalDateTime.now().plusDays(3));
+            prepararSolicitacaoValida();
+
+            service.solicitar(
+                    criarRequest(EMBARQUE_COMPATIVEL_LAT, EMBARQUE_COMPATIVEL_LON, 1),
+                    usuarioId
+            );
+
+            ArgumentCaptor<ReservaCarona> captor = ArgumentCaptor.forClass(ReservaCarona.class);
+            verify(repository).save(captor.capture());
+            ReservaCarona salva = captor.getValue();
+            assertEquals(salva.getDataReserva().plusHours(24), salva.getDataExpiracao());
+        }
+
+        @Test
+        @DisplayName("Deve limitar o prazo de resposta a uma hora antes da partida")
+        void deveLimitarPrazoAntesDaPartida() {
+            LocalDateTime dataPartida = LocalDateTime.now().plusHours(10);
+            carona.setDataHoraPartida(dataPartida);
+            prepararSolicitacaoValida();
+
+            service.solicitar(
+                    criarRequest(EMBARQUE_COMPATIVEL_LAT, EMBARQUE_COMPATIVEL_LON, 1),
+                    usuarioId
+            );
+
+            ArgumentCaptor<ReservaCarona> captor = ArgumentCaptor.forClass(ReservaCarona.class);
+            verify(repository).save(captor.capture());
+            assertEquals(dataPartida.minusHours(1), captor.getValue().getDataExpiracao());
+            verify(notificacaoService).dispararNotificacaoSistemica(
+                    eq(motorista),
+                    eq("Nova solicitação de reserva"),
+                    contains(dataPartida.minusHours(1).format(
+                            java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy 'às' HH:mm")
+                    )),
+                    eq(TipoNotificacao.RESERVA_CRIADA)
+            );
+        }
+
+        @Test
+        @DisplayName("Não deve criar reserva quando o limite anterior à partida já foi atingido")
+        void naoDeveCriarReservaComPrazoEncerrado() {
+            carona.setDataHoraPartida(LocalDateTime.now().plusMinutes(30));
+            when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
+
+            assertThrows(EstadoInvalidoException.class, () -> service.solicitar(
+                    criarRequest(EMBARQUE_COMPATIVEL_LAT, EMBARQUE_COMPATIVEL_LON, 1),
+                    usuarioId
+            ));
+
+            verify(repository, never()).save(any());
+            verify(chatRepository, never()).save(any());
+            verifyNoInteractions(notificacaoService);
+        }
+
+        private void prepararSolicitacaoValida() {
+            when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
+            when(repository.existsByCarona_IdAndUsuario_IdAndStatusIn(eq(caronaId), eq(usuarioId), anyList()))
+                    .thenReturn(false);
+            when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
+            when(repository.save(any(ReservaCarona.class))).thenAnswer(invocation -> invocation.getArgument(0));
         }
 
         @Test
@@ -470,6 +542,20 @@ class ReservaCaronaServiceTest {
         }
 
         @Test
+        @DisplayName("Não deve aceitar reserva pendente depois do prazo de resposta")
+        void naoDeveAceitarReservaExpirada() {
+            reserva.setDataExpiracao(LocalDateTime.now().minusSeconds(1));
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+
+            assertThrows(EstadoInvalidoException.class, () ->
+                    service.aceitar(reservaId, motoristaId));
+
+            verify(caronaRepository, never()).findByIdForUpdate(any());
+            verify(repository, never()).save(any());
+            verifyNoInteractions(notificacaoService);
+        }
+
+        @Test
         @DisplayName("Não deve aceitar quando não há vagas suficientes")
         void naoDeveAceitarSemVagasSuficientes() {
             carona.setVagasTotais(2);
@@ -533,6 +619,19 @@ class ReservaCaronaServiceTest {
         }
 
         @Test
+        @DisplayName("Não deve recusar reserva pendente depois do prazo de resposta")
+        void naoDeveRecusarReservaExpirada() {
+            reserva.setDataExpiracao(LocalDateTime.now().minusSeconds(1));
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+
+            assertThrows(EstadoInvalidoException.class, () ->
+                    service.recusar(reservaId, motoristaId));
+
+            verify(repository, never()).save(any());
+            verifyNoInteractions(notificacaoService);
+        }
+
+        @Test
         @DisplayName("Não deve recusar se usuário não for o motorista da carona")
         void naoDeveRecusarSeNaoForMotorista() {
             when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
@@ -585,12 +684,26 @@ class ReservaCaronaServiceTest {
         }
 
         @Test
-        @DisplayName("Não deve permitir que o motorista cancele a reserva (cancelar() é exclusivo do passageiro)")
-        void naoDevePermitirMotoristaCancelar() {
+        @DisplayName("Deve permitir que o motorista cancele reserva ACEITA")
+        void devePermitirMotoristaCancelarAceita() {
             reserva.setStatus(StatusReserva.ACEITA);
             when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+            when(repository.save(any(ReservaCarona.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            assertThrows(AcessoNegadoException.class, () ->
+            ReservaStatusResponseDTO response = service.cancelar(reservaId, motoristaId);
+
+            assertEquals(StatusReserva.CANCELADA, response.status());
+            verify(notificacaoService).dispararNotificacaoSistemica(
+                    eq(usuario), anyString(), anyString(), eq(TipoNotificacao.RESERVA_CANCELADA));
+        }
+
+        @Test
+        @DisplayName("Não deve permitir que o motorista cancele reserva PENDENTE")
+        void naoDevePermitirMotoristaCancelarPendente() {
+            reserva.setStatus(StatusReserva.PENDENTE);
+            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
+
+            assertThrows(EstadoInvalidoException.class, () ->
                     service.cancelar(reservaId, motoristaId));
 
             verify(repository, never()).save(any());
@@ -647,8 +760,8 @@ class ReservaCaronaServiceTest {
     class RemoverReserva {
 
         @Test
-        @DisplayName("Deve remover reserva pendente (removerReservaPassageiro é exclusivo do motorista dono da carona)")
-        void deveRemoverReservaPendente() {
+        @DisplayName("Não deve remover reserva pendente")
+        void naoDeveRemoverReservaPendente() {
 
 
             reserva.setStatus(StatusReserva.PENDENTE);
@@ -658,20 +771,15 @@ class ReservaCaronaServiceTest {
                     .thenReturn(Optional.of(reserva));
 
 
-            service.removerReservaPassageiro(
-                    reservaId,
-                    motoristaId
+            assertThrows(
+                    EstadoInvalidoException.class,
+                    () -> service.removerReservaPassageiro(
+                            reservaId,
+                            motoristaId
+                    )
             );
 
-
-            assertEquals(
-                    StatusReserva.CANCELADA,
-                    reserva.getStatus()
-            );
-
-
-            verify(repository)
-                    .save(reserva);
+            verify(repository, never()).save(any());
         }
 
         @Test
@@ -732,7 +840,7 @@ class ReservaCaronaServiceTest {
         void naoDeveRemoverReservaDeOutroUsuario() {
 
 
-            reserva.setStatus(StatusReserva.PENDENTE);
+            reserva.setStatus(StatusReserva.ACEITA);
 
 
             when(repository.findByIdForUpdate(reservaId))

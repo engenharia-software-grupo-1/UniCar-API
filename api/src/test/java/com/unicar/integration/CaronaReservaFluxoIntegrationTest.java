@@ -58,7 +58,9 @@ class CaronaReservaFluxoIntegrationTest extends IntegrationTestSupport {
                 .tipoVeiculo(TipoVeiculo.CARRO)
                 .build());
 
-        LocalDateTime dataPartida = LocalDateTime.now().plusMinutes(2).withNano(0);
+        // A reserva só pode ser solicitada até unicar.reserva.antecedencia-minima-partida
+        // (1h por padrão) antes da partida, por isso a folga de 2h aqui.
+        LocalDateTime dataPartida = LocalDateTime.now().plusHours(2).withNano(0);
 
         String requestCarona = """
                 {

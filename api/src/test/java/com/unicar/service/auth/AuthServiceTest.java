@@ -354,8 +354,8 @@ class AuthServiceTest {
 
         @ParameterizedTest(name = "cpfEureca={0} -> cpfEsperado={1}, badGateway={2}")
         @CsvSource({
-                "5,00000000005,false",
-                "1234567891,01234567891,false",
+                "123456789,x,true",
+                "1234567890,01234567890,false",
                 "12345678901,12345678901,false",
                 "123456789012,x,true"
         })
