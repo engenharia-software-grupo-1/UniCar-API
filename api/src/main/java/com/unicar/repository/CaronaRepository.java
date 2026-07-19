@@ -4,17 +4,17 @@ import com.unicar.domain.Carona;
 import com.unicar.enums.StatusCarona;
 
 import jakarta.persistence.LockModeType;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 
 public interface CaronaRepository extends JpaRepository<Carona, Long>, JpaSpecificationExecutor<Carona> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -45,6 +45,12 @@ public interface CaronaRepository extends JpaRepository<Carona, Long>, JpaSpecif
             @Param("latitude") BigDecimal latitude,
             @Param("longitude") BigDecimal longitude,
             @Param("raioMetros") double raioMetros);
+
+    @Query("SELECT c FROM Carona c " +
+            "WHERE c.motorista.id = :motoristaId " +
+            "AND c.status = com.unicar.enums.StatusCarona.FINALIZADA " +
+            "ORDER BY c.dataHoraPartida DESC")
+    Page<Carona> findHistoricoComoMotorista(@Param("motoristaId") Long motoristaId, Pageable pageable);
 
     interface CaronaProximaProjection {
         Long getId();
