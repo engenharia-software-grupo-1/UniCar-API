@@ -5,6 +5,7 @@ plugins {
 	id 'jacoco'
 	id 'com.github.spotbugs' version '6.5.9'
 	id 'pmd'
+	id 'info.solidsoft.pitest' version '1.19.0'
 }
 
 group = 'com.unicar'
@@ -99,6 +100,21 @@ tasks.withType(Pmd).configureEach {
         html.required = true
         xml.required = true
     }
+}
+
+pitest {
+    pitestVersion = '1.25.5'
+    junit5PluginVersion = '1.2.3'
+    // Primeira passada: só o pacote service, onde está a maior parte da
+    // regra de negócio, e só os testes unitários (Mockito) correspondentes
+    // como candidatos a matar mutante. Os testes de integração/@WebMvcTest
+    // sobem contexto Spring a cada execução — incluí-los faria o PIT
+    // reexecutar esse bootstrap por mutante, inviável numa primeira rodada.
+    targetClasses = ['com.unicar.service.*']
+    targetTests = ['com.unicar.service.*']
+    outputFormats = ['HTML', 'XML']
+    timestampedReports = false
+    threads = 4
 }
 
 tasks.named('test') {
