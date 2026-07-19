@@ -318,7 +318,8 @@ components:
             - CARONA_CANCELADA
             - CARONA_INICIADA
             - CARONA_FINALIZADA
-            - CARONA_COMPATIVEL
+            - NOTIFICACAO_AVALIACAO
+            - INTERESSE_TRAJETO
           example: RESERVA_ACEITA
         visualizada:
           type: boolean
