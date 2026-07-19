@@ -17,9 +17,6 @@
 -- Não permitir múltiplas avaliações do mesmo avaliador
 -- para o mesmo usuário na mesma carona.
 --
--- RN-DEN-01
--- Usuário não pode denunciar a si mesmo.
---
 -- RN-RES-09
 -- Valor da contribuição da reserva deve ser armazenado.
 --
@@ -74,20 +71,6 @@ ALTER TABLE avaliacao
 
 COMMENT ON CONSTRAINT uk_avaliacao ON avaliacao IS
 'Impede múltiplas avaliações do mesmo avaliador para o mesmo usuário na mesma carona.';
-
-
--- ============================================================
--- DENÚNCIAS
--- ============================================================
-
-ALTER TABLE denuncia
-    ADD CONSTRAINT chk_denuncia_propria
-        CHECK (
-            denunciante_id <> denunciado_id
-            );
-
-COMMENT ON CONSTRAINT chk_denuncia_propria ON denuncia IS
-'Impede que um usuário denuncie a si próprio.';
 
 
 -- ============================================================

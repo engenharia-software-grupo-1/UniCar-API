@@ -373,14 +373,17 @@ public class AuthService {
         if (cpf == null) {
             return null;
         }
+
         String digitos = cpf.replaceAll("\\D", "");
-        // Alguns retornos do Eureca tratam o CPF como número em algum ponto do
-        // pipeline, o que descarta o zero à esquerda (ex: 08539337401 vira
-        // 8539337401). Como o CPF sempre tem 11 dígitos, é seguro recompor.
-        if (digitos.length() == TAMANHO_CPF - 1) {
-            digitos = "0" + digitos;
+
+        if (digitos.length() > TAMANHO_CPF) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "O CPF retornado pelo Eureca é inválido."
+            );
         }
-        return digitos;
+
+        return String.format("%11s", digitos).replace(' ', '0');
     }
 
     private static String validarCpf(String cpfBruto) {

@@ -479,7 +479,7 @@ components:
 
     VeiculoRequest:
       type: object
-      required: [modelo, placa]
+      required: [modelo, placa, tipoVeiculo]
       properties:
         modelo:
           type: string
@@ -493,7 +493,7 @@ components:
         tipoVeiculo:
           type: string
           example: CARRO
-          enum: CARRO, MOTO
+          enum: [CARRO, MOTO]
 
     Veiculo:
       type: object
@@ -904,7 +904,7 @@ components:
           example: 50
         status:
           type: string
-          enum: [PENDENTE, ACEITA, RECUSADA, CANCELADA, EXPIRADA, FINALIZADA]
+          enum: [PENDENTE, ACEITA, RECUSADA, CANCELADA, REMOVIDA, CONCLUIDA]
           example: ACEITA
 
     ReservaEnviada:
@@ -2070,7 +2070,7 @@ paths:
       summary: Finalizar uma carona
       description: >
         Apenas o motorista proprietário pode finalizar. Carona deve estar
-        EM_ANDAMENTO. Reservas ACEITAS são marcadas como FINALIZADAS e
+        EM_ANDAMENTO. Reservas ACEITAS são marcadas como CONCLUIDAS e
         participantes ficam elegíveis para avaliação (RN-CAR-22 a RN-CAR-25).
       parameters:
         - name: id
