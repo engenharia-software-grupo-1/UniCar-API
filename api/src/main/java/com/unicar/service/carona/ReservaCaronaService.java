@@ -80,6 +80,7 @@ public class ReservaCaronaService {
                 .valorContribuicao(valorContribuicao)
                 .status(StatusReserva.PENDENTE)
                 .dataExpiracao(carona.getDataHoraPartida().minusHours(1))
+                .dataReserva(LocalDateTime.now())
                 .build();
 
         reserva = repository.save(reserva);

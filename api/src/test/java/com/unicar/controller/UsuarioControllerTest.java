@@ -96,11 +96,19 @@ class UsuarioControllerTest {
         @DisplayName("deve retornar 200 e o perfil do usuário autenticado")
         void deveBuscarPerfil() throws Exception {
             UsuarioDTO dto = new UsuarioDTO(
-                    1L, "20230001", "Oscar Rodrigues", "oscar@teste.com",
-                    "12345678901", "Computação", Genero.NAO_INFORMADO.name(),
-                    true, LocalDateTime.now(), LocalDateTime.now()
+                    1L,
+                    "20230001",
+                    "Oscar Rodrigues",
+                    "oscar@teste.com",
+                    "12345678901",
+                    "Computação",
+                    Genero.NAO_INFORMADO.name(),
+                    true,
+                    "https://teste.com/foto.png",
+                    LocalDateTime.now(),
+                    LocalDateTime.now()
             );
- 
+
             when(usuarioService.buscarPerfil(1L)).thenReturn(dto);
  
             mockMvc.perform(get("/usuarios/me"))
@@ -122,11 +130,19 @@ class UsuarioControllerTest {
         @DisplayName("deve retornar 200 e o perfil atualizado")
         void deveAtualizarPerfil() throws Exception {
             UpdatePerfilRequestDTO request = new UpdatePerfilRequestDTO(Genero.MASCULINO, false);
- 
+
             UsuarioDTO response = new UsuarioDTO(
-                    1L, "20230001", "Oscar Rodrigues", "oscar@teste.com",
-                    "12345678901", "Computação", Genero.MASCULINO.name(),
-                    false, LocalDateTime.now(), LocalDateTime.now()
+                    1L,
+                    "20230001",
+                    "Oscar Rodrigues",
+                    "oscar@teste.com",
+                    "12345678901",
+                    "Computação",
+                    Genero.MASCULINO.name(),
+                    false,
+                    "https://teste.com/foto.png",
+                    LocalDateTime.now(),
+                    LocalDateTime.now()
             );
  
             when(usuarioService.atualizarPerfil(eq(1L), any(UpdatePerfilRequestDTO.class)))
@@ -171,6 +187,7 @@ class UsuarioControllerTest {
                     "Oscar Rodrigues",
                     "Computação",
                     "NAO_INFORMADO",
+                    "https://teste.com/foto.png",
                     4.8,
                     15
             );

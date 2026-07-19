@@ -50,6 +50,9 @@ public class Usuario implements Serializable {
     @Column(nullable = false)
     private Genero genero;
 
+    @Column(length = 1000)
+    private String linkFoto;
+
     @PrePersist
     protected void onCreate() {
         if (this.receberEmail == null) {

@@ -15,6 +15,9 @@ RUN ./gradlew clean bootJar -x test
 # Runtime
 FROM eclipse-temurin:21-jre
 
+ENV TZ=America/Recife
+ENV JAVA_TOOL_OPTIONS="-Duser.timezone=America/Recife"
+
 WORKDIR /app
 
 COPY --from=build /app/build/libs/*.jar app.jar

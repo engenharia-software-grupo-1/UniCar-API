@@ -72,6 +72,9 @@ class VeiculoIntegrationTest extends IntegrationTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.modelo").value("Onix"));
 
+        // Reenvia a mesma placa de propósito: prova que atualizar sem trocar a
+        // placa não esbarra na própria unicidade (existsByPlacaAndIdNot exclui
+        // o próprio veículo da checagem).
         mockMvc.perform(put("/veiculos/{id}", veiculoId)
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -115,15 +118,39 @@ class VeiculoIntegrationTest extends IntegrationTestSupport {
 
         Usuario outroUsuario = criarUsuario("segundo");
 
-        // A violação de unicidade da placa é detectada pelo banco (constraint), não
-        // pela camada de serviço, e cai no handler genérico de 500 do
-        // GlobalExceptionHandler. Como isso marca a transação do teste como
-        // rollback-only, nenhuma outra query pode ser feita depois nesta mesma
-        // transação — por isso a asserção fica só na resposta HTTP.
+        // VeiculoService.validarPlacar agora checa a unicidade antes de salvar
+        // (RegraDeNegocioException -> 400), em vez de deixar a constraint do
+        // banco estourar (o que antes caía no handler genérico de 500).
         mockMvc.perform(post("/veiculos")
                         .header("Authorization", bearerToken(outroUsuario))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestVeiculo("REP3T01")))
-                .andExpect(status().is5xxServerError());
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("Não deve permitir atualizar um veículo para a placa de outro veículo já existente")
+    void naoDevePermitirAtualizarParaPlacaDeOutroVeiculo() throws Exception {
+        veiculoRepository.save(Veiculo.builder()
+                .usuario(motorista)
+                .modelo("Gol")
+                .placa("JAX1234")
+                .tipoVeiculo(TipoVeiculo.CARRO)
+                .build());
+
+        String resposta = mockMvc.perform(post("/veiculos")
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestVeiculo("KLM5678")))
+                .andReturn().getResponse().getContentAsString();
+
+        Number idLido = com.jayway.jsonpath.JsonPath.read(resposta, "$.id");
+        Long segundoVeiculoId = idLido.longValue();
+
+        mockMvc.perform(put("/veiculos/{id}", segundoVeiculoId)
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestVeiculo("JAX1234")))
+                .andExpect(status().isBadRequest());
     }
 }

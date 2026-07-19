@@ -4,6 +4,7 @@ import com.unicar.domain.ReservaCarona;
 import com.unicar.enums.StatusReserva;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 public record ReservaRecebidaResponseDTO(
     Long id,
@@ -11,7 +12,8 @@ public record ReservaRecebidaResponseDTO(
     EnderecoDTO origemEmbarque,
     Integer quantidadePassageiros,
     BigDecimal valorContribuicao,
-    StatusReserva status
+    StatusReserva status,
+    LocalDateTime dataSolicitacao
 ) {
     public ReservaRecebidaResponseDTO(ReservaCarona reserva) {
         this(
@@ -24,7 +26,8 @@ public record ReservaRecebidaResponseDTO(
             ),
             reserva.getQuantidadePassageiros(),
             reserva.getValorContribuicao(),
-            reserva.getStatus()
+            reserva.getStatus(),
+            reserva.getDataReserva()
         );
     }
 }

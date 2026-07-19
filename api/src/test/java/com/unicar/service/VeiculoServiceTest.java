@@ -5,7 +5,9 @@ import com.unicar.domain.Veiculo;
 import com.unicar.dto.veiculo.VeiculoRequestDTO;
 import com.unicar.dto.veiculo.VeiculoResponseDTO;
 import com.unicar.enums.TipoVeiculo;
+import com.unicar.exception.RegraDeNegocioException;
 import com.unicar.exception.VeiculoNaoEncontradoException;
+import com.unicar.repository.CaronaRepository;
 import com.unicar.repository.VeiculoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,11 +19,13 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 class VeiculoServiceTest {
 
     private VeiculoRepository veiculoRepository;
+    private CaronaRepository caronaRepository;
     private VeiculoService veiculoService;
 
     private Usuario usuario;
@@ -31,7 +35,9 @@ class VeiculoServiceTest {
     @BeforeEach
     void setUp() {
         veiculoRepository = mock(VeiculoRepository.class);
-        veiculoService = new VeiculoService(veiculoRepository);
+        caronaRepository = mock(CaronaRepository.class);
+
+        veiculoService = new VeiculoService(veiculoRepository, caronaRepository);
 
         usuario = Usuario.builder()
             .id(1L)
@@ -91,10 +97,10 @@ class VeiculoServiceTest {
         @DisplayName("Deve buscar veículo por id")
         void deveBuscar() {
             when(veiculoRepository.findByIdAndUsuarioId(10L, usuario.getId()))
-                .thenReturn(Optional.of(veiculo));
+                    .thenReturn(Optional.of(veiculo));
 
             VeiculoResponseDTO response =
-                veiculoService.buscarPorId(usuario.getId(), 10L);
+                    veiculoService.buscarPorId(usuario.getId(), 10L);
 
             assertThat(response.id()).isEqualTo(10L);
             assertThat(response.modelo()).isEqualTo("Onix");
@@ -199,10 +205,34 @@ class VeiculoServiceTest {
             when(veiculoRepository.findByIdAndUsuarioId(10L, usuario.getId()))
                 .thenReturn(Optional.of(veiculo));
 
+            when(caronaRepository.existsByVeiculoId(10L))
+                    .thenReturn(false);
+
             veiculoService.excluir(usuario.getId(), 10L);
 
             verify(veiculoRepository).findByIdAndUsuarioId(10L, usuario.getId());
+            verify(caronaRepository).existsByVeiculoId(10L);
             verify(veiculoRepository).delete(veiculo);
+        }
+
+        @Test
+        @DisplayName("Não deve excluir veículo vinculado a uma carona")
+        void naoDeveExcluirVeiculoVinculadoACarona() {
+
+            when(veiculoRepository.findByIdAndUsuarioId(10L, usuario.getId()))
+                    .thenReturn(Optional.of(veiculo));
+
+            when(caronaRepository.existsByVeiculoId(10L))
+                    .thenReturn(true);
+
+            assertThatThrownBy(() ->
+                    veiculoService.excluir(usuario.getId(), 10L))
+                    .isInstanceOf(RegraDeNegocioException.class)
+                    .hasMessage("Não é possível excluir este veículo, pois ele já está vinculado a uma ou mais caronas.");
+
+            verify(veiculoRepository).findByIdAndUsuarioId(10L, usuario.getId());
+            verify(caronaRepository).existsByVeiculoId(10L);
+            verify(veiculoRepository, never()).delete(any());
         }
 
         @Test
@@ -218,6 +248,7 @@ class VeiculoServiceTest {
                 .hasMessage("Veículo não encontrado");
 
             verify(veiculoRepository).findByIdAndUsuarioId(10L, usuario.getId());
+            verify(caronaRepository, never()).existsByVeiculoId(anyLong());
             verify(veiculoRepository, never()).delete(any());
         }
     }
