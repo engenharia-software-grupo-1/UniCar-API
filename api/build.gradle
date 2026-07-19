@@ -4,6 +4,7 @@ plugins {
 	id 'io.spring.dependency-management' version '1.1.7'
 	id 'jacoco'
 	id 'com.github.spotbugs' version '6.5.9'
+	id 'pmd'
 }
 
 group = 'com.unicar'
@@ -77,6 +78,25 @@ tasks.named('spotbugsTest') {
         xml {
             required = true
         }
+    }
+}
+
+pmd {
+    toolVersion = "7.26.0"
+    ruleSets = []
+    ruleSetFiles = files("config/pmd/ruleset.xml")
+    // Só código de produção: as regras de "boas práticas de JUnit" do PMD
+    // (ex.: proibir mais de um assert por teste, exigir mensagem em todo
+    // assert) colidem direto com o estilo de teste já estabelecido no
+    // projeto (Mockito + AssertJ, múltiplas asserções por método) e
+    // geram só ruído, não achado real.
+    sourceSets = [sourceSets.main]
+}
+
+tasks.withType(Pmd).configureEach {
+    reports {
+        html.required = true
+        xml.required = true
     }
 }
 
