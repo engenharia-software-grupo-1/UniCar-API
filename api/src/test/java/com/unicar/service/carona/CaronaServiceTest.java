@@ -18,9 +18,11 @@ import com.unicar.exception.EstadoInvalidoException;
 import com.unicar.exception.RegraDeNegocioException;
 import com.unicar.exception.VeiculoNaoEncontradoException;
 import com.unicar.repository.CaronaRepository;
+import com.unicar.repository.InteresseTrajetoRepository;
 import com.unicar.repository.ReservaCaronaRepository;
 import com.unicar.repository.UsuarioRepository;
 import com.unicar.repository.VeiculoRepository;
+import com.unicar.service.NotificacaoService;
 import com.unicar.util.GeoUtils;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +55,10 @@ class CaronaServiceTest {
     private VeiculoRepository veiculoRepository;
     @Mock
     private ReservaCaronaRepository reservaCaronaRepository;
+    @Mock
+    private InteresseTrajetoRepository interesseTrajetoRepository;
+    @Mock
+    private NotificacaoService notificacaoService;
     @InjectMocks
     private CaronaService caronaService;
     private final Long caronaId = 1L;
