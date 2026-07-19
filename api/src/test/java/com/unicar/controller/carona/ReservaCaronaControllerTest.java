@@ -169,7 +169,8 @@ class ReservaCaronaControllerTest {
                             new CaronaResumoDTO(CARONA_ID, "Bodocongó", "UFCG"),
                             StatusReserva.PENDENTE,
                             2,
-                            new BigDecimal("8.00"))
+                            new BigDecimal("8.00"),
+                            LocalDateTime.now())
             );
 
             when(reservaCaronaService.listarEnviadas(USUARIO_ID)).thenReturn(reservas);
