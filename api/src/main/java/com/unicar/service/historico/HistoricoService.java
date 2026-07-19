@@ -71,16 +71,16 @@ public class HistoricoService {
         Carona carona = caronaRepository.findById(caronaId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Histórico ou carona não encontrada."));
 
-        // ✅ Corrigido estritamente para o enum correto: FINALIZADA
-        if (carona.getStatus() != StatusCarona.FINALIZADA) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Esta viagem ainda não foi finalizada.");
-        }
-
         boolean isMotorista = carona.getMotorista().getId().equals(usuarioId);
         boolean isPassageiro = reservaCaronaRepository.existsByCaronaIdAndUsuarioId(caronaId, usuarioId);
 
         if (!isMotorista && !isPassageiro) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado: você não participou desta viagem.");
+        }
+
+
+        if (carona.getStatus() != StatusCarona.FINALIZADA) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Esta viagem ainda não foi finalizada.");
         }
 
         ParticipanteResumoDTO motoristaDTO = new ParticipanteResumoDTO(
