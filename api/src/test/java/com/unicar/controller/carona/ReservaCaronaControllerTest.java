@@ -166,7 +166,7 @@ class ReservaCaronaControllerTest {
             List<ReservaEnviadaResponseDTO> reservas = List.of(
                     new ReservaEnviadaResponseDTO(
                             50L,
-                            new CaronaResumoDTO(CARONA_ID, "Bodocongó", "UFCG"),
+                            new CaronaResumoDTO(CARONA_ID, "Bodocongó", "UFCG", "Motorista"),
                             StatusReserva.PENDENTE,
                             2,
                             new BigDecimal("8.00"),
@@ -233,7 +233,7 @@ class ReservaCaronaControllerTest {
                     2,
                     new BigDecimal("8.00"),
                     new EnderecoDTO("Rua Aprígio Veloso", new BigDecimal("-7.22"), new BigDecimal("-35.91")),
-                    new CaronaResumoDTO(CARONA_ID, "Bodocongó", "UFCG"), LocalDateTime.now());
+                    new CaronaResumoDTO(CARONA_ID, "Bodocongó", "UFCG", "Motorista"), LocalDateTime.now());
 
             when(reservaCaronaService.buscarDetalhe(50L, USUARIO_ID)).thenReturn(response);
 
