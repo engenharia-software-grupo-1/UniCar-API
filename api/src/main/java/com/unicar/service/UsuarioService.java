@@ -38,7 +38,8 @@ public class UsuarioService {
                 usuario.getGenero().name(),
                 usuario.getLinkFoto(),
                 reputacao.media(),
-                reputacao.quantidadeAvaliacoes().intValue()
+                reputacao.quantidadeAvaliacoes().intValue(),
+                avaliacaoService.listarAvaliacoesRecebidas(id)
         );
     }
 

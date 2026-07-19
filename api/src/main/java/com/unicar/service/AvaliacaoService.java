@@ -85,10 +85,13 @@ public class AvaliacaoService {
         Double media = avaliacaoRepository.calcularMedia(usuarioId);
         Long quantidade = avaliacaoRepository.countByAvaliadoId(usuarioId);
 
+        List<AvaliacaoRecebidaDTO> avaliacoes = listarAvaliacoesRecebidas(usuarioId);
+
         return new ReputacaoDTO(
                 usuario.getId(),
                 arredondarMedia(media),
-                quantidade
+                quantidade,
+                avaliacoes
         );
     }
 
