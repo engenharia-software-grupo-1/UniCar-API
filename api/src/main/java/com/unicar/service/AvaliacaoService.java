@@ -8,6 +8,7 @@ import com.unicar.dto.avaliacao.AvaliacaoRequestDTO;
 import com.unicar.dto.avaliacao.ParticipantePendenteDTO;
 import com.unicar.dto.avaliacao.ReputacaoDTO;
 import com.unicar.enums.StatusCarona;
+import com.unicar.enums.StatusReserva;
 import com.unicar.exception.CaronaNaoEncontradaException;
 import com.unicar.exception.RegraDeNegocioException;
 import com.unicar.exception.UsuarioNaoEncontradoException;
@@ -20,6 +21,8 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -34,13 +37,8 @@ public class AvaliacaoService {
     private final CaronaRepository caronaRepository;
     private final ReservaCaronaRepository reservaCaronaRepository;
 
-    /**
-     * Registra a avaliação de um usuário sobre outro em uma carona finalizada,
-     * validando participação, nota e se já não foi avaliado antes.
-     */
     @Transactional
-    public void avaliar(Long usuarioId, AvaliacaoRequestDTO dto) {
-
+    public Long avaliar(Long usuarioId, AvaliacaoRequestDTO dto) {
         Usuario avaliador = buscarUsuario(usuarioId);
         Usuario avaliado = buscarUsuario(dto.avaliadoId());
         Carona carona = buscarCarona(dto.caronaId());
@@ -59,27 +57,19 @@ public class AvaliacaoService {
                 .dataAvaliacao(LocalDateTime.now())
                 .build();
 
-        avaliacaoRepository.save(avaliacao);
+        return avaliacaoRepository.save(avaliacao).getId();
     }
 
-    /**
-     * Lista todas as avaliações recebidas por um usuário.
-     */
     public List<AvaliacaoRecebidaDTO> listarAvaliacoesRecebidas(Long usuarioId) {
-
         buscarUsuario(usuarioId);
 
-        return avaliacaoRepository.findByAvaliadoId(usuarioId)
+        return avaliacaoRepository.findByAvaliadoIdOrderByDataAvaliacaoDesc(usuarioId)
                 .stream()
                 .map(AvaliacaoRecebidaDTO::new)
                 .toList();
     }
 
-    /**
-     * Calcula a reputação (média e quantidade de avaliações) de um único usuário.
-     */
     public ReputacaoDTO buscarReputacao(Long usuarioId) {
-
         Usuario usuario = buscarUsuario(usuarioId);
 
         Double media = avaliacaoRepository.calcularMedia(usuarioId);
@@ -87,54 +77,44 @@ public class AvaliacaoService {
 
         return new ReputacaoDTO(
                 usuario.getId(),
-                media == null ? 0.0 : media,
+                arredondarMedia(media),
                 quantidade
         );
     }
 
-    /**
-     * Calcula a reputação de vários usuários em uma única query agregada,
-     * evitando N chamadas ao banco quando há múltiplos motoristas a avaliar
-     * (usado, por exemplo, na busca de caronas disponíveis).
-     * Usuários sem avaliação retornam média 0.0 e quantidade 0.
-     */
     public List<ReputacaoDTO> buscarReputacoes(List<Long> usuarioIds) {
         if (usuarioIds == null || usuarioIds.isEmpty()) {
             return List.of();
         }
 
-        List<ReputacaoAgregadaProjection> agregadas =
-                avaliacaoRepository.calcularMediasPorUsuarios(usuarioIds);
-
+        List<ReputacaoAgregadaProjection> agregadas = avaliacaoRepository.calcularMediasPorUsuarios(usuarioIds);
         Map<Long, ReputacaoAgregadaProjection> porUsuario = agregadas.stream()
                 .collect(Collectors.toMap(ReputacaoAgregadaProjection::getUsuarioId, r -> r));
 
         return usuarioIds.stream()
                 .map(id -> {
                     ReputacaoAgregadaProjection r = porUsuario.get(id);
-                    double media = (r != null && r.getMedia() != null) ? r.getMedia() : 0.0;
+                    Double mediaRaw = (r != null) ? r.getMedia() : null;
                     long quantidade = (r != null) ? r.getQuantidade() : 0L;
-                    return new ReputacaoDTO(id, media, quantidade);
+                    return new ReputacaoDTO(id, arredondarMedia(mediaRaw), quantidade);
                 })
                 .toList();
     }
 
-    /**
-     * Lista os participantes de uma carona finalizada que o usuário autenticado ainda não avaliou.
-     */
     public List<ParticipantePendenteDTO> listarAvaliacoesPendentes(Long caronaId, Long usuarioAutenticadoId) {
         Carona carona = buscarCarona(caronaId);
         validarCaronaFinalizada(carona);
 
-        // Reutiliza seu método de validação para garantir segurança na consulta
-        Usuario usuarioLogado = buscarUsuario(usuarioAutenticadoId);
-
-        java.util.List<ParticipantePendenteDTO> pendentes = new java.util.ArrayList<>();
-
         boolean ehMotorista = carona.getMotorista().getId().equals(usuarioAutenticadoId);
+        boolean ehPassageiro = reservaCaronaRepository.existsByCaronaIdAndUsuarioId(caronaId, usuarioAutenticadoId);
+
+        if (!ehMotorista && !ehPassageiro) {
+            throw new RegraDeNegocioException("Apenas participantes da carona podem consultar avaliações pendentes.");
+        }
+
+        List<ParticipantePendenteDTO> pendentes = new java.util.ArrayList<>();
 
         if (!ehMotorista) {
-            // Se eu sou PASSAGEIRO, posso avaliar o MOTORISTA caso ainda não o tenha feito
             boolean jaAvaliouMotorista = avaliacaoRepository.existsByCaronaIdAndAvaliadorIdAndAvaliadoId(
                     caronaId, usuarioAutenticadoId, carona.getMotorista().getId()
             );
@@ -146,9 +126,7 @@ public class AvaliacaoService {
                 ));
             }
         } else {
-            // Se eu sou MOTORISTA, preciso buscar todos os passageiros confirmados desta carona
-            // Nota: use o método adequado do seu reservaCaronaRepository que traga os passageiros aceitos
-            List<com.unicar.domain.ReservaCarona> reservas = reservaCaronaRepository.findByCaronaId(caronaId);
+            List<com.unicar.domain.ReservaCarona> reservas = reservaCaronaRepository.findByCaronaIdAndStatus(caronaId, StatusReserva.ACEITA);
 
             for (com.unicar.domain.ReservaCarona reserva : reservas) {
                 Long passageiroId = reserva.getUsuario().getId();
@@ -170,65 +148,44 @@ public class AvaliacaoService {
 
     private Usuario buscarUsuario(Long id) {
         return usuarioRepository.findById(id)
-                .orElseThrow(() ->
-                        new UsuarioNaoEncontradoException("Usuário não encontrado."));
+                .orElseThrow(() -> new UsuarioNaoEncontradoException("Usuário não encontrado."));
     }
 
     private Carona buscarCarona(Long id) {
         return caronaRepository.findById(id)
-                .orElseThrow(() ->
-                        new CaronaNaoEncontradaException("Carona não encontrada."));
+                .orElseThrow(() -> new CaronaNaoEncontradaException("Carona não encontrada."));
     }
 
     private void validarNota(Integer nota) {
         if (nota < 1 || nota > 5) {
-            throw new RegraDeNegocioException(
-                    "A nota deve estar entre 1 e 5.");
+            throw new RegraDeNegocioException("A nota deve estar entre 1 e 5.");
         }
     }
 
     private void validarCaronaFinalizada(Carona carona) {
         if (!carona.getStatus().equals(StatusCarona.FINALIZADA)) {
-            throw new RegraDeNegocioException(
-                    "A carona ainda não foi finalizada.");
+            throw new RegraDeNegocioException("A carona ainda não foi finalizada.");
         }
     }
 
-    private void validarParticipacao(Carona carona,
-                                     Long avaliadorId,
-                                     Long avaliadoId) {
+    private void validarParticipacao(Carona carona, Long avaliadorId, Long avaliadoId) {
+        boolean avaliadorEhMotorista = carona.getMotorista().getId().equals(avaliadorId);
+        boolean avaliadoEhMotorista = carona.getMotorista().getId().equals(avaliadoId);
 
-        boolean avaliadorEhMotorista =
-                carona.getMotorista().getId().equals(avaliadorId);
-
-        boolean avaliadoEhMotorista =
-                carona.getMotorista().getId().equals(avaliadoId);
-
-        boolean avaliadorEhPassageiro =
-                reservaCaronaRepository.existsByCaronaIdAndUsuarioId(
-                        carona.getId(), avaliadorId);
-
-        boolean avaliadoEhPassageiro =
-                reservaCaronaRepository.existsByCaronaIdAndUsuarioId(
-                        carona.getId(), avaliadoId);
+        boolean avaliadorEhPassageiro = reservaCaronaRepository.existsByCaronaIdAndUsuarioId(carona.getId(), avaliadorId);
+        boolean avaliadoEhPassageiro = reservaCaronaRepository.existsByCaronaIdAndUsuarioId(carona.getId(), avaliadoId);
 
         if (!(avaliadorEhMotorista || avaliadorEhPassageiro)) {
-            throw new RegraDeNegocioException(
-                    "O avaliador não participou da carona.");
+            throw new RegraDeNegocioException("O avaliador não participou da carona.");
         }
-
         if (!(avaliadoEhMotorista || avaliadoEhPassageiro)) {
-            throw new RegraDeNegocioException(
-                    "O avaliado não participou da carona.");
+            throw new RegraDeNegocioException("O avaliado não participou da carona.");
         }
-
         if (avaliadorId.equals(avaliadoId)) {
-            throw new RegraDeNegocioException(
-                    "O usuário não pode avaliar a si mesmo.");
+            throw new RegraDeNegocioException("O usuário não pode avaliar a si mesmo.");
         }
         if (avaliadorEhPassageiro && avaliadoEhPassageiro) {
-            throw new RegraDeNegocioException(
-                "Passageiros não podem se avaliar entre si.");
+            throw new RegraDeNegocioException("Passageiros não podem se avaliar entre si.");
         }
     }
 
@@ -236,5 +193,12 @@ public class AvaliacaoService {
         if (avaliacaoRepository.existsByCaronaIdAndAvaliadorIdAndAvaliadoId(caronaId, avaliadorId, avaliadoId)) {
             throw new RegraDeNegocioException("Você já avaliou este usuário nesta carona.");
         }
+    }
+
+    private Double arredondarMedia(Double media) {
+        if (media == null) return 0.0;
+        return BigDecimal.valueOf(media)
+                .setScale(1, RoundingMode.HALF_UP)
+                .doubleValue();
     }
 }
