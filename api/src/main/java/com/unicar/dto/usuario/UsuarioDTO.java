@@ -13,6 +13,7 @@ public record UsuarioDTO(
     String curso,
     String genero,
     Boolean receberEmail,
+    String linkFoto,
     LocalDateTime dataCriacao,
     LocalDateTime dataAtualizacao
 ) {
@@ -26,6 +27,7 @@ public record UsuarioDTO(
             usuario.getCurso(),
             usuario.getGenero() != null ? usuario.getGenero().name() : null,
             usuario.getReceberEmail(),
+            usuario.getLinkFoto(),
             usuario.getDataCriacao(),
             usuario.getDataAtualizacao()
         );

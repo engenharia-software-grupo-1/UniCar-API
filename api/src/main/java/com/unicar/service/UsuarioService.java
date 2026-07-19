@@ -2,10 +2,12 @@ package com.unicar.service;
 
 import com.unicar.domain.Usuario;
 import com.unicar.dto.usuario.PerfilUsuarioDTO;
+import com.unicar.dto.usuario.UpdateFotoPerfilRequestDTO;
 import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
 import com.unicar.dto.usuario.UsuarioDTO;
 import com.unicar.repository.UsuarioRepository;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,7 @@ public class UsuarioService {
                 usuario.getNome(),
                 usuario.getCurso(),
                 usuario.getGenero().name(),
+                usuario.getLinkFoto(),
                 reputacao.media(),
                 reputacao.quantidadeAvaliacoes().intValue()
         );
@@ -92,4 +95,11 @@ public class UsuarioService {
         }
     }
 
+    @Transactional
+    public UsuarioDTO atualizarFoto(Long usuarioId, UpdateFotoPerfilRequestDTO request) {
+        Usuario usuario = buscarUsuarioAtivo(usuarioId);
+        usuario.setLinkFoto(request.linkFoto());
+
+        return UsuarioDTO.from(usuarioRepository.save(usuario));
+    }
 }
