@@ -634,7 +634,7 @@ class ReservaCaronaServiceTest {
                     .thenReturn(Optional.of(reserva));
 
 
-            service.removerReserva(
+            service.removerReservaPassageiro(
                     reservaId,
                     usuarioId
             );
@@ -662,7 +662,7 @@ class ReservaCaronaServiceTest {
                     .thenReturn(Optional.of(reserva));
 
 
-            service.removerReserva(
+            service.removerReservaPassageiro(
                     reservaId,
                     usuarioId
             );
@@ -692,7 +692,7 @@ class ReservaCaronaServiceTest {
             assertThrows(
                     EstadoInvalidoException.class,
                     () ->
-                            service.removerReserva(
+                            service.removerReservaPassageiro(
                                     reservaId,
                                     usuarioId
                             )
@@ -718,7 +718,7 @@ class ReservaCaronaServiceTest {
             assertThrows(
                     AcessoNegadoException.class,
                     () ->
-                            service.removerReserva(
+                            service.removerReservaPassageiro(
                                     reservaId,
                                     outroUsuarioId
                             )
