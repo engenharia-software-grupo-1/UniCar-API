@@ -6,11 +6,26 @@ Este projeto foi desenvolvido como parte da disciplina de **Engenharia de Softwa
 
 ---
 
+## Destaques
+
+- API REST desenvolvida com Java 21 e Spring Boot 3
+- Arquitetura em camadas (Controller → Service → Repository)
+- Autenticação e autorização utilizando JWT
+- Persistência com PostgreSQL e Spring Data JPA
+- Versionamento do banco de dados com Flyway
+- Documentação automática utilizando OpenAPI/Swagger
+- Especificação formal em Alloy para validação das regras de negócio
+- Testes automatizados com JUnit 5, Mockito e MockMvc
+- Containerização com Docker
+
+---
+
 # Sumário
 
 - [Tecnologias](#tecnologias)
 - [Arquitetura](#arquitetura)
 - [Estrutura do Projeto](#estrutura-do-projeto)
+- [Especificação Formal](#especificação-formal)
 - [Funcionalidades](#funcionalidades)
 - [Requisitos](#requisitos)
 - [Variáveis de Ambiente](#variáveis-de-ambiente)
@@ -22,10 +37,11 @@ Este projeto foi desenvolvido como parte da disciplina de **Engenharia de Softwa
 - [Testes](#testes)
 - [Licença](#licença)
 - [Universidade](#universidade)
+- [Contribuidores](#contribuidores)
 
 ---
 
-## Tecnologias
+# Tecnologias
 
 - Java 21
 - Spring Boot 3
@@ -42,32 +58,32 @@ Este projeto foi desenvolvido como parte da disciplina de **Engenharia de Softwa
 
 ---
 
-## Arquitetura
+# Arquitetura
 
-A API segue uma arquitetura em camadas, separando responsabilidades entre controladores, serviços e acesso aos dados.
+A API segue uma arquitetura em camadas, promovendo separação de responsabilidades, facilidade de manutenção e alta coesão entre os componentes da aplicação.
 
 ```text
-Cliente (Web / Mobile)
-          │
-          ▼
-     REST API
-          │
-          ▼
- Controllers
-          │
-          ▼
-   Service Layer
-          │
-          ▼
-Repositories (JPA)
-          │
-          ▼
-     PostgreSQL
+                Cliente (Web / Mobile)
+                         │
+                         ▼
+                    REST API
+                         │
+                         ▼
+                  Controllers
+                         │
+                         ▼
+                 Service Layer
+                         │
+                         ▼
+              Repositories (JPA)
+                         │
+                         ▼
+                   PostgreSQL
 ```
 
 ---
 
-## Estrutura do Projeto
+# Estrutura do Projeto
 
 ```text
 src
@@ -84,6 +100,7 @@ src
 │   │       ├── security
 │   │       ├── service
 │   │       └── util
+│   │
 │   └── resources
 │       ├── db
 │       │   └── migration
@@ -93,7 +110,7 @@ src
     └── java
 ```
 
-Cada pacote possui uma responsabilidade específica:
+### Organização dos pacotes
 
 | Pacote | Responsabilidade |
 |---------|------------------|
@@ -101,7 +118,7 @@ Cada pacote possui uma responsabilidade específica:
 | `controller` | Endpoints REST |
 | `domain` | Entidades JPA |
 | `dto` | Objetos de transferência de dados |
-| `repository` | Acesso ao banco de dados |
+| `repository` | Persistência de dados |
 | `service` | Regras de negócio |
 | `security` | Autenticação e autorização |
 | `exception` | Tratamento global de exceções |
@@ -109,24 +126,60 @@ Cada pacote possui uma responsabilidade específica:
 
 ---
 
-## Funcionalidades
+# Especificação Formal
 
-- Autenticação via JWT
+Além da implementação da API, o projeto possui uma **especificação formal desenvolvida em Alloy**, utilizada para modelar e validar regras de negócio antes da implementação.
+
+A especificação foi organizada de forma modular, permitindo a verificação independente dos principais domínios da aplicação.
+
+```text
+especificacao-formal/
+├── main.als
+└── modules
+    ├── avaliacao.als
+    ├── carona.als
+    ├── comunicacao.als
+    ├── interesse_trajeto.als
+    ├── reserva.als
+    ├── usuario.als
+    └── veiculo.als
+```
+
+### Organização
+
+| Arquivo | Descrição |
+|----------|-----------|
+| `main.als` | Arquivo principal responsável por importar todos os módulos e executar as verificações. |
+| `usuario.als` | Modelo formal dos usuários e suas restrições. |
+| `veiculo.als` | Especificação dos veículos cadastrados. |
+| `carona.als` | Modelagem das caronas e suas regras de negócio. |
+| `reserva.als` | Especificação das reservas realizadas pelos passageiros. |
+| `avaliacao.als` | Modelo das avaliações entre usuários. |
+| `comunicacao.als` | Regras relacionadas à comunicação entre motorista e passageiros. |
+| `interesse_trajeto.als` | Modelagem dos interesses em trajetos. |
+
+A especificação foi utilizada para validar propriedades do sistema, consistência das regras de negócio e possíveis cenários antes da implementação da API.
+
+---
+
+# Funcionalidades
+
+- Autenticação utilizando JWT
 - Gerenciamento de usuários
 - Gerenciamento de veículos
 - Cadastro e gerenciamento de caronas
+- Busca de caronas
 - Reserva de vagas
 - Trajetos recorrentes
-- Busca de caronas
 - Avaliações entre usuários
+- Chat entre motorista e passageiros
 - Histórico de viagens
 - Sistema de notificações
-- Chat entre motorista e passageiros
 - Bloqueio de usuários
 
 ---
 
-## Requisitos
+# Requisitos
 
 - Java 21
 - PostgreSQL
@@ -134,18 +187,18 @@ Cada pacote possui uma responsabilidade específica:
 
 ---
 
-## Variáveis de Ambiente
+# Variáveis de Ambiente
 
 Configure as seguintes variáveis antes de iniciar a aplicação.
 
 | Variável | Descrição |
 |----------|-----------|
-| `DB_URL` | URL de conexão com o PostgreSQL |
-| `DB_USER` | Usuário do banco |
-| `DB_PASSWORD` | Senha do banco |
-| `JWT_SECRET` | Chave utilizada para assinatura dos tokens JWT |
+| `DB_URL` | URL de conexão com o banco PostgreSQL |
+| `DB_USER` | Usuário do banco de dados |
+| `DB_PASSWORD` | Senha do banco de dados |
+| `JWT_SECRET` | Chave utilizada para geração e validação dos tokens JWT |
 | `MAIL_USERNAME` | Conta utilizada para envio de e-mails |
-| `MAIL_PASSWORD` | Senha ou App Password da conta de e-mail |
+| `MAIL_PASSWORD` | Senha (ou App Password) da conta de e-mail |
 
 Exemplo:
 
@@ -162,16 +215,21 @@ MAIL_PASSWORD=
 
 ---
 
-## Executando o Projeto
+# Executando o Projeto
 
-Clone o repositório:
+Clone o repositório.
 
 ```bash
-git clone <url-do-repositorio>
+git clone https://github.com/engenharia-software-grupo-1/UniCar-API.git
+```
+
+Acesse o diretório.
+
+```bash
 cd unicar-api
 ```
 
-Execute a aplicação:
+Execute a aplicação.
 
 ```bash
 ./gradlew bootRun
@@ -185,7 +243,7 @@ http://localhost:8080
 
 ---
 
-## Executando com Docker
+# Executando com Docker
 
 Construindo a imagem:
 
@@ -209,31 +267,33 @@ docker run \
 
 ---
 
-## Documentação da API
+# Documentação da API
 
-### Produção
+## Ambiente de Produção
 
-Swagger UI
+### Swagger UI
 
 ```
 https://unicar-api.onrender.com/swagger-ui/index.html
 ```
 
-OpenAPI
+### OpenAPI
 
 ```
 https://unicar-api.onrender.com/v3/api-docs
 ```
 
-### Ambiente Local
+---
 
-Swagger UI
+## Ambiente Local
+
+### Swagger UI
 
 ```
 http://localhost:8080/swagger-ui/index.html
 ```
 
-OpenAPI
+### OpenAPI
 
 ```
 http://localhost:8080/v3/api-docs
@@ -241,11 +301,11 @@ http://localhost:8080/v3/api-docs
 
 ---
 
-## Autenticação
+# Autenticação
 
-A API utiliza autenticação baseada em **JWT**.
+A API utiliza autenticação baseada em **JSON Web Token (JWT)**.
 
-Após realizar o login, inclua o token no cabeçalho das requisições protegidas.
+Após realizar o login, todas as requisições autenticadas devem enviar o token no cabeçalho HTTP.
 
 ```http
 Authorization: Bearer <token>
@@ -253,17 +313,23 @@ Authorization: Bearer <token>
 
 ---
 
-## Banco de Dados
+# Banco de Dados
 
-As migrações do banco são gerenciadas pelo **Flyway**.
+O projeto utiliza **Flyway** para versionamento do banco de dados.
 
-Todas as migrations presentes em `src/main/resources/db/migration` são executadas automaticamente durante a inicialização da aplicação.
+Todas as migrações localizadas em:
+
+```text
+src/main/resources/db/migration
+```
+
+são executadas automaticamente durante a inicialização da aplicação.
 
 ---
 
-## Testes
+# Testes
 
-Para executar toda a suíte de testes:
+Para executar todos os testes automatizados:
 
 ```bash
 ./gradlew test
@@ -278,12 +344,54 @@ O projeto utiliza:
 
 ---
 
-## Licença
+# Licença
 
-Este projeto está licenciado sob os termos da **MIT License**.
+Este projeto está licenciado sob os termos da **MIT License**. Consulte o arquivo `LICENSE` para mais informações.
 
 ---
 
-## Universidade
+# Universidade
 
-Projeto desenvolvido para a disciplina de **Engenharia de Software** da **Universidade Federal de Campina Grande (UFCG)**.
+Projeto desenvolvido para a disciplina de **Engenharia de Software**, ofertada pela **Universidade Federal de Campina Grande (UFCG)**.
+
+# Contribuidores
+
+<table>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/isadoralucena">
+        <img src="https://github.com/isadoralucena.png" width="120px;" alt="Isadora Lucena"/>
+        <br />
+        <sub><b>Isadora Lucena</b></sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/jennifermedeiross">
+        <img src="https://github.com/jennifermedeiross.png" width="120px;" alt="Jennifer Medeiros"/>
+        <br />
+        <sub><b>Jennifer Medeiros</b></sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/OscarRodrigues-83">
+        <img src="https://github.com/OscarRodrigues-83.png" width="120px;" alt="Oscar Rodrigues"/>
+        <br />
+        <sub><b>Oscar Rodrigues</b></sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/MarceloLuisDantas">
+        <img src="https://github.com/MarceloLuisDantas.png" width="120px;" alt="Marcelo Luis Dantas"/>
+        <br />
+        <sub><b>Marcelo Luis Dantas</b></sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/Eduarda-Cabral">
+        <img src="https://github.com/Eduarda-Cabral.png" width="120px;" alt="Eduarda Cabral"/>
+        <br />
+        <sub><b>Eduarda Cabral</b></sub>
+      </a>
+    </td>
+  </tr>
+</table>
