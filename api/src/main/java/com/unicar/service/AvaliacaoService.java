@@ -184,8 +184,9 @@ public class AvaliacaoService {
         if (avaliadorId.equals(avaliadoId)) {
             throw new RegraDeNegocioException("O usuário não pode avaliar a si mesmo.");
         }
-        if (avaliadorEhPassageiro && avaliadoEhPassageiro) {
-            throw new RegraDeNegocioException("Passageiros não podem se avaliar entre si.");
+
+        if (avaliadoEhPassageiro && !avaliadorEhMotorista) {
+            throw new RegraDeNegocioException("Apenas o motorista dono da carona pode avaliar um passageiro.");
         }
     }
 
