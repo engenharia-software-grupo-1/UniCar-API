@@ -786,6 +786,10 @@ components:
             curso:
               type: string
               example: Ciência da Computação
+            linkFoto:
+              type: string
+              format: uri
+              example: https://cdn.exemplo.com/maria.jpg
             reputacao:
               type: number
               format: float
