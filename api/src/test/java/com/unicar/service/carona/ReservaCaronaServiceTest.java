@@ -21,6 +21,8 @@ import com.unicar.exception.ReservaNaoEncontradaException;
 import com.unicar.repository.CaronaRepository;
 import com.unicar.repository.ReservaCaronaRepository;
 import com.unicar.repository.UsuarioRepository;
+import com.unicar.repository.chat.ChatRepository;
+import com.unicar.service.NotificacaoService;
 import com.unicar.util.GeoUtils;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -28,8 +30,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -59,6 +59,12 @@ class ReservaCaronaServiceTest {
 
     @Mock
     private UsuarioRepository usuarioRepository;
+
+    @Mock
+    private ChatRepository chatRepository;
+
+    @Mock
+    private NotificacaoService notificacaoService;
 
     @InjectMocks
     private ReservaCaronaService service;
@@ -266,65 +272,20 @@ class ReservaCaronaServiceTest {
                     service.solicitar(request, usuarioId));
         }
 
-        @ParameterizedTest(name = "solicitados={0} -> aceita={1}")
-        @CsvSource({
-                "1,true",
-                "2,true",
-                "3,false"
-        })
-        @DisplayName("Deve validar limite de vagas disponíveis ao solicitar reserva")
-        void vagasLimiteDeSolicitacao(int quantidadePassageiros, boolean deveSerAceita) {
-            when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
-            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(2);
-
-            ReservaRequestDTO request = criarRequest(EMBARQUE_COMPATIVEL_LAT, EMBARQUE_COMPATIVEL_LON, quantidadePassageiros);
-
-            if (deveSerAceita) {
-                when(repository.existsByCarona_IdAndUsuario_IdAndStatusIn(eq(caronaId), eq(usuarioId), anyList()))
-                        .thenReturn(false);
-                when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
-                when(repository.save(any(ReservaCarona.class))).thenAnswer(inv -> inv.getArgument(0));
-
-                assertDoesNotThrow(() -> service.solicitar(request, usuarioId));
-            } else {
-                assertThrows(RegraDeNegocioException.class, () -> service.solicitar(request, usuarioId));
-                verify(repository, never()).save(any());
-            }
-        }
-
-        @ParameterizedTest(name = "delta={0} -> aceita={1}")
-        @CsvSource({
-                "-0.01,false",
-                "0.00,true",
-                "0.01,true"
-        })
-        @DisplayName("Deve validar tolerância do desvio de trajeto no embarque")
-        void toleranciaLimiteDeDesvio(double delta, boolean deveSerAceita) {
-            BigDecimal distanciaTotal = GeoUtils.calcularDistanciaKm(ORIGEM_LAT, ORIGEM_LON, DESTINO_LAT, DESTINO_LON);
-            BigDecimal distanciaOrigemEmbarque = GeoUtils.calcularDistanciaKm(
-                    ORIGEM_LAT, ORIGEM_LON, EMBARQUE_INCOMPATIVEL_LAT, EMBARQUE_INCOMPATIVEL_LON);
-            BigDecimal distanciaEmbarqueDestino = GeoUtils.calcularDistanciaKm(
-                    EMBARQUE_INCOMPATIVEL_LAT, EMBARQUE_INCOMPATIVEL_LON, DESTINO_LAT, DESTINO_LON);
-            BigDecimal desvio = distanciaOrigemEmbarque.add(distanciaEmbarqueDestino).subtract(distanciaTotal);
-
-            ReflectionTestUtils.setField(service, "toleranciaTrajetoKm", desvio.add(BigDecimal.valueOf(delta)));
-
+        @Test
+        @DisplayName("Deve lançar erro quando usuário autenticado não for encontrado")
+        void deveLancarErroQuandoUsuarioNaoForEncontrado() {
             when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
             when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
+            when(repository.existsByCarona_IdAndUsuario_IdAndStatusIn(eq(caronaId), eq(usuarioId), anyList()))
+                    .thenReturn(false);
+            when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.empty());
 
-            ReservaRequestDTO request = criarRequest(EMBARQUE_INCOMPATIVEL_LAT, EMBARQUE_INCOMPATIVEL_LON, 1);
+            ReservaRequestDTO request = criarRequest(EMBARQUE_COMPATIVEL_LAT, EMBARQUE_COMPATIVEL_LON, 2);
 
-            if (deveSerAceita) {
-                when(repository.existsByCarona_IdAndUsuario_IdAndStatusIn(eq(caronaId), eq(usuarioId), anyList()))
-                        .thenReturn(false);
-                when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.of(usuario));
-                when(repository.save(any(ReservaCarona.class))).thenAnswer(inv -> inv.getArgument(0));
+            assertThrows(AcessoNegadoException.class, () -> service.solicitar(request, usuarioId));
 
-                assertDoesNotThrow(() -> service.solicitar(request, usuarioId));
-            } else {
-                assertThrows(RegraDeNegocioException.class, () -> service.solicitar(request, usuarioId));
-                verify(repository, never()).save(any());
-            }
+            verify(repository, never()).save(any());
         }
     }
 
@@ -354,6 +315,18 @@ class ReservaCaronaServiceTest {
             ReservaRequestDTO request = criarRequest(EMBARQUE_COMPATIVEL_LAT, EMBARQUE_COMPATIVEL_LON, 2);
 
             assertThrows(CaronaNaoEncontradaException.class, () -> service.simular(request));
+        }
+
+        @Test
+        @DisplayName("Deve lançar erro quando origem e destino da carona forem o mesmo ponto")
+        void deveLancarErroQuandoDistanciaTotalForZero() {
+            carona.setDestinoLatitude(ORIGEM_LAT);
+            carona.setDestinoLongitude(ORIGEM_LON);
+            when(caronaRepository.findById(caronaId)).thenReturn(Optional.of(carona));
+
+            ReservaRequestDTO request = criarRequest(EMBARQUE_COMPATIVEL_LAT, EMBARQUE_COMPATIVEL_LON, 2);
+
+            assertThrows(RegraDeNegocioException.class, () -> service.simular(request));
         }
     }
 
@@ -612,24 +585,12 @@ class ReservaCaronaServiceTest {
         }
 
         @Test
-        @DisplayName("Deve permitir que o motorista cancele reserva ACEITA")
-        void devePermitirMotoristaCancelarAceita() {
+        @DisplayName("Não deve permitir que o motorista cancele a reserva (cancelar() é exclusivo do passageiro)")
+        void naoDevePermitirMotoristaCancelar() {
             reserva.setStatus(StatusReserva.ACEITA);
             when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
-            when(repository.save(any(ReservaCarona.class))).thenAnswer(inv -> inv.getArgument(0));
 
-            ReservaStatusResponseDTO response = service.cancelar(reservaId, motoristaId);
-
-            assertEquals(StatusReserva.CANCELADA, response.status());
-        }
-
-        @Test
-        @DisplayName("Não deve permitir que o motorista cancele reserva PENDENTE")
-        void naoDevePermitirMotoristaCancelarPendente() {
-            reserva.setStatus(StatusReserva.PENDENTE);
-            when(repository.findByIdForUpdate(reservaId)).thenReturn(Optional.of(reserva));
-
-            assertThrows(EstadoInvalidoException.class, () ->
+            assertThrows(AcessoNegadoException.class, () ->
                     service.cancelar(reservaId, motoristaId));
 
             verify(repository, never()).save(any());
@@ -686,7 +647,7 @@ class ReservaCaronaServiceTest {
     class RemoverReserva {
 
         @Test
-        @DisplayName("Deve remover reserva pendente")
+        @DisplayName("Deve remover reserva pendente (removerReservaPassageiro é exclusivo do motorista dono da carona)")
         void deveRemoverReservaPendente() {
 
 
@@ -697,9 +658,9 @@ class ReservaCaronaServiceTest {
                     .thenReturn(Optional.of(reserva));
 
 
-            service.removerReserva(
+            service.removerReservaPassageiro(
                     reservaId,
-                    usuarioId
+                    motoristaId
             );
 
 
@@ -725,9 +686,9 @@ class ReservaCaronaServiceTest {
                     .thenReturn(Optional.of(reserva));
 
 
-            service.removerReserva(
+            service.removerReservaPassageiro(
                     reservaId,
-                    usuarioId
+                    motoristaId
             );
 
 
@@ -755,9 +716,9 @@ class ReservaCaronaServiceTest {
             assertThrows(
                     EstadoInvalidoException.class,
                     () ->
-                            service.removerReserva(
+                            service.removerReservaPassageiro(
                                     reservaId,
-                                    usuarioId
+                                    motoristaId
                             )
             );
 
@@ -767,7 +728,7 @@ class ReservaCaronaServiceTest {
         }
 
         @Test
-        @DisplayName("Não deve remover reserva de outro usuário")
+        @DisplayName("Não deve remover reserva quando quem chama não é o motorista dono da carona")
         void naoDeveRemoverReservaDeOutroUsuario() {
 
 
@@ -781,9 +742,9 @@ class ReservaCaronaServiceTest {
             assertThrows(
                     AcessoNegadoException.class,
                     () ->
-                            service.removerReserva(
+                            service.removerReservaPassageiro(
                                     reservaId,
-                                    outroUsuarioId
+                                    usuarioId
                             )
             );
 

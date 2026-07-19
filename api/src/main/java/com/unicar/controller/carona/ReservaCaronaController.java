@@ -87,7 +87,7 @@ public class ReservaCaronaController {
             @PathVariable Long id,
             @AuthenticationPrincipal UsuarioDetails usuario) {
 
-        reservaCaronaService.removerReserva(id,usuario.getUsuario().getId());
+        reservaCaronaService.removerReservaPassageiro(id,usuario.getUsuario().getId());
         return ResponseEntity.noContent().build();
     }
 
@@ -110,7 +110,7 @@ public class ReservaCaronaController {
     }
 
     @PatchMapping("/{id}/cancelar")
-    @Operation(summary = "Cancela uma reserva")
+    @Operation(summary = "Cancela uma reserva como passageiro")
     public ResponseEntity<ReservaStatusResponseDTO> cancelar(
             @PathVariable Long id,
             @AuthenticationPrincipal UsuarioDetails usuario) {

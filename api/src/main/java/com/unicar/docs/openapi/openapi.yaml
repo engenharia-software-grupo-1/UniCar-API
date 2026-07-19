@@ -708,7 +708,7 @@ components:
       type: object
       properties:
         id:
-          type: integer
+          type: string
           example: 1
         origem:
           $ref: '#/components/schemas/Coordenada'
@@ -2209,7 +2209,7 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
+            type: string
           example: 1
       requestBody:
         required: true
@@ -2552,8 +2552,7 @@ paths:
       tags: [Reservas]
       summary: Cancelar uma reserva
       description: >
-        Passageiro pode cancelar a própria reserva; motorista pode cancelar
-        reservas ACEITAS. Vagas devolvidas se reserva estava ACEITA.
+        Passageiro pode cancelar a própria reserva. Vagas devolvidas se reserva estava ACEITA.
         Usuário afetado é notificado (RN-RES-23 a RN-RES-27).
       parameters:
         - name: id
