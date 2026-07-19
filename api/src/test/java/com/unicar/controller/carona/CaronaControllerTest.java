@@ -22,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -89,7 +90,12 @@ class CaronaControllerTest {
                             1L,
                             USUARIO_ID,
                             "João",
-                            5
+                            5,
+                            new EnderecoDTO(
+                                    "Rua das Flores, 123",
+                                    BigDecimal.valueOf(-7.23072),
+                                    BigDecimal.valueOf(-35.88172)
+                            )
                     )
             );
 
