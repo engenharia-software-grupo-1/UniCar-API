@@ -90,6 +90,7 @@ class CaronaControllerTest {
                             1L,
                             USUARIO_ID,
                             "João",
+                            null,
                             5,
                             new EnderecoDTO(
                                     "Rua das Flores, 123",

@@ -6,6 +6,7 @@ public record ChatDTO(
         Long id,
         Long reservaId,
         String nomeParticipante,
+        String linkFotoParticipante,
         String ultimaMensagem,
         LocalDateTime dataUltimaMensagem,
         Integer mensagensNaoLidas

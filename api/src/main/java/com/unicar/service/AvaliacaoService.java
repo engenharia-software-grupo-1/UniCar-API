@@ -141,6 +141,7 @@ public class AvaliacaoService {
                 pendentes.add(new ParticipantePendenteDTO(
                         carona.getMotorista().getId(),
                         carona.getMotorista().getNome(),
+                        carona.getMotorista().getLinkFoto(),
                         "MOTORISTA"
                 ));
             }
@@ -156,6 +157,7 @@ public class AvaliacaoService {
                     pendentes.add(new ParticipantePendenteDTO(
                             passageiroId,
                             reserva.getUsuario().getNome(),
+                            reserva.getUsuario().getLinkFoto(),
                             "PASSAGEIRO"
                     ));
                 }

@@ -81,6 +81,7 @@ class CaronaServiceTest {
 
         motorista = new Usuario();
         motorista.setId(motoristaId);
+        motorista.setLinkFoto("https://cdn.exemplo.com/motorista.jpg");
 
         veiculo = new Veiculo();
         veiculo.setId(veiculoId);
@@ -378,6 +379,7 @@ class CaronaServiceTest {
 
             assertEquals(caronaId, resultado.id());
             assertEquals(3, resultado.vagasDisponiveis());
+            assertEquals("https://cdn.exemplo.com/motorista.jpg", resultado.motorista().linkFoto());
         }
 
         @Test
@@ -553,6 +555,7 @@ class CaronaServiceTest {
             Usuario passageiro = new Usuario();
             passageiro.setId(2L);
             passageiro.setNome("João");
+            passageiro.setLinkFoto("https://cdn.exemplo.com/passageiro.jpg");
             ReservaCarona reserva = new ReservaCarona();
             reserva.setUsuario(passageiro);
             reserva.setCarona(carona);
@@ -563,6 +566,7 @@ class CaronaServiceTest {
             List<PassageiroResponseDTO> resultado = caronaService.listarPassageiros(caronaId, motoristaId);
             assertNotNull(resultado);
             assertEquals(1, resultado.size());
+            assertEquals("https://cdn.exemplo.com/passageiro.jpg", resultado.getFirst().linkFoto());
             verify(reservaCaronaRepository).findByCaronaIdAndStatus(caronaId, StatusReserva.ACEITA);
         }
         @Test

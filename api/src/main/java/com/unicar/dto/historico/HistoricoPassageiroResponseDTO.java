@@ -10,6 +10,7 @@ public record HistoricoPassageiroResponseDTO(
         String destino,
         Long motoristaId,
         String motorista,
+        String motoristaLinkFoto,
         StatusCarona status,
         LocalDateTime dataViagem,
         Integer quantidadePassageiros

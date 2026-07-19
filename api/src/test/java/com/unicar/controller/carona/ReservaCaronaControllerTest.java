@@ -195,7 +195,7 @@ class ReservaCaronaControllerTest {
             List<ReservaRecebidaResponseDTO> reservas = List.of(
                     new ReservaRecebidaResponseDTO(
                             50L,
-                            new UsuarioResumoDTO(5L, "Maria Oliveira"),
+                            new UsuarioResumoDTO(5L, "Maria Oliveira", null),
                             new EnderecoDTO(
                                     "Rua Aprígio Veloso",
                                     new BigDecimal("-7.22"),

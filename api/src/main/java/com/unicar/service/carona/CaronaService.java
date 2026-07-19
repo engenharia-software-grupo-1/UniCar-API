@@ -169,7 +169,11 @@ public class CaronaService {
                 carona.getValorContribuicao(),
                 carona.getStatus(),
                 carona.getObservacao(),
-                new MotoristaResumoDTO(carona.getMotorista().getId(), carona.getMotorista().getNome()),
+                new MotoristaResumoDTO(
+                        carona.getMotorista().getId(),
+                        carona.getMotorista().getNome(),
+                        carona.getMotorista().getLinkFoto()
+                ),
                 new VeiculoResumoDTO(carona.getVeiculo().getId(), carona.getVeiculo().getModelo(), carona.getVeiculo().getCor())
         );
     }

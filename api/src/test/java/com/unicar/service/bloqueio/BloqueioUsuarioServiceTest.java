@@ -47,7 +47,8 @@ class BloqueioUsuarioServiceTest {
     @BeforeEach
     void setUp() {
         usuarioOrigem = Usuario.builder().id(1L).nome("Jennifer Medeiros").curso("Ciência da Computação").build();
-        usuarioAlvo = Usuario.builder().id(5L).nome("João Silva").curso("Engenharia Elétrica").build();
+        usuarioAlvo = Usuario.builder().id(5L).nome("João Silva").curso("Engenharia Elétrica")
+                .linkFoto("https://cdn.exemplo.com/joao.jpg").build();
 
         bloqueioExemplo = BloqueioUsuario.builder()
                 .id(10L)
@@ -71,6 +72,7 @@ class BloqueioUsuarioServiceTest {
             assertThat(resultado).hasSize(1);
             assertThat(resultado.get(0).id()).isEqualTo(5L);
             assertThat(resultado.get(0).nome()).isEqualTo("João Silva");
+            assertThat(resultado.get(0).linkFoto()).isEqualTo("https://cdn.exemplo.com/joao.jpg");
             verify(repository).findAllByUsuarioId(1L);
         }
     }
