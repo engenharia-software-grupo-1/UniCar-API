@@ -308,7 +308,7 @@ class ReservaCaronaControllerTest {
             .andExpect(status().isNoContent());
 
             verify(reservaCaronaService)
-                    .removerReserva(10L, 1L);
+                    .removerReservaPassageiro(10L, 1L);
         }
     }
 }

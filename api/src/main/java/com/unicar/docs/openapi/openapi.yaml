@@ -2552,8 +2552,7 @@ paths:
       tags: [Reservas]
       summary: Cancelar uma reserva
       description: >
-        Passageiro pode cancelar a própria reserva; motorista pode cancelar
-        reservas ACEITAS. Vagas devolvidas se reserva estava ACEITA.
+        Passageiro pode cancelar a própria reserva. Vagas devolvidas se reserva estava ACEITA.
         Usuário afetado é notificado (RN-RES-23 a RN-RES-27).
       parameters:
         - name: id

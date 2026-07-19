@@ -25,6 +25,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -156,8 +157,7 @@ public class ReservaCaronaService {
         ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
 
         boolean isPassageiro = reserva.getUsuario().getId().equals(usuarioId);
-        boolean isMotorista = reserva.getCarona().getMotorista().getId().equals(usuarioId);
-        if (!isPassageiro && !isMotorista) {
+        if (!isPassageiro) {
             throw new AcessoNegadoException("Usuário não tem permissão para cancelar esta reserva");
         }
 
@@ -166,46 +166,32 @@ public class ReservaCaronaService {
             throw new EstadoInvalidoException("Não é possível cancelar uma reserva finalizada");
         }
 
-        boolean podeCancelar = isPassageiro
-                ? (status == StatusReserva.PENDENTE || status == StatusReserva.ACEITA)
-                : status == StatusReserva.ACEITA;
-
-        if (!podeCancelar) {
-            throw new EstadoInvalidoException("Não é possível cancelar uma reserva com status " + status);
+        if (status != StatusReserva.ACEITA && status != StatusReserva.PENDENTE) {
+            throw new EstadoInvalidoException(
+                    "Não é possível cancelar uma reserva com status " + status);
         }
 
         reserva.setStatus(StatusReserva.CANCELADA);
         reserva.setDataResposta(LocalDateTime.now());
         reserva = repository.save(reserva);
 
-        if (isPassageiro) {
-            notificacaoService.dispararNotificacaoSistemica(
-                    reserva.getCarona().getMotorista(),
-                    "Reserva Cancelada pelo Passageiro",
-                    NotificacaoTemplates.reservaCanceladaPeloPassageiro(
-                            reserva.getUsuario(),
-                            reserva.getCarona()
-                    ),
-                    TipoNotificacao.RESERVA_CANCELADA
-            );
-        } else {
-            notificacaoService.dispararNotificacaoSistemica(
-                    reserva.getUsuario(),
-                    "Reserva Cancelada pelo Motorista",
-                    NotificacaoTemplates.reservaCanceladaPeloMotorista(
-                            reserva.getCarona()
-                    ),
-                    TipoNotificacao.RESERVA_CANCELADA
-            );
-        }
+        notificacaoService.dispararNotificacaoSistemica(
+                reserva.getCarona().getMotorista(),
+                "Reserva Cancelada pelo Passageiro",
+                NotificacaoTemplates.reservaCanceladaPeloPassageiro(
+                        reserva.getUsuario(),
+                        reserva.getCarona()
+                ),
+                TipoNotificacao.RESERVA_CANCELADA
+        );
 
         return new ReservaStatusResponseDTO(reserva);
     }
 
     @Transactional
-    public void removerReserva(Long reservaId, Long usuarioId) {
+    public void removerReservaPassageiro(Long reservaId, Long usuarioId) {
         ReservaCarona reserva = buscarReservaParaAtualizacao(reservaId);
-        validarDono(reserva, usuarioId);
+        validarDonoCarona(reserva, usuarioId);
 
         if (reserva.getStatus() != StatusReserva.PENDENTE && reserva.getStatus() != StatusReserva.ACEITA) {
             throw new EstadoInvalidoException("Não é possível remover uma reserva com status " + reserva.getStatus());
@@ -270,9 +256,9 @@ public class ReservaCaronaService {
         }
     }
 
-    private void validarDono(ReservaCarona reserva, Long usuarioId) {
-        if (!reserva.getUsuario().getId().equals(usuarioId)) {
-            throw new AcessoNegadoException("Usuário não é o dono desta reserva");
+    private void validarDonoCarona(ReservaCarona reserva, Long usuarioId) {
+        if (!reserva.getCarona().getMotorista().getId().equals(usuarioId)) {
+            throw new AcessoNegadoException("Usuário não é o dono desta carona");
         }
     }
 
