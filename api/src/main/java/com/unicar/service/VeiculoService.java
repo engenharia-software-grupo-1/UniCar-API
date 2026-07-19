@@ -4,7 +4,9 @@ import com.unicar.domain.Usuario;
 import com.unicar.domain.Veiculo;
 import com.unicar.dto.veiculo.VeiculoRequestDTO;
 import com.unicar.dto.veiculo.VeiculoResponseDTO;
+import com.unicar.exception.RegraDeNegocioException;
 import com.unicar.exception.VeiculoNaoEncontradoException;
+import com.unicar.repository.CaronaRepository;
 import com.unicar.repository.VeiculoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,7 @@ import java.util.List;
 public class VeiculoService {
 
     private final VeiculoRepository veiculoRepository;
+    private final CaronaRepository caronaRepository;
 
     public List<VeiculoResponseDTO> listarPorUsuario(Long usuarioId) {
         return veiculoRepository.findAllByUsuarioId(usuarioId).stream()
@@ -38,6 +41,8 @@ public class VeiculoService {
             .tipoVeiculo(request.tipoVeiculo())
             .build();
 
+        validarPlacar(veiculo.getPlaca());
+
         return VeiculoResponseDTO.from(veiculoRepository.save(veiculo));
     }
 
@@ -50,17 +55,35 @@ public class VeiculoService {
         veiculo.setCor(request.cor());
         veiculo.setTipoVeiculo(request.tipoVeiculo());
 
+        validarPlacar(veiculo.getPlaca());
+
         return VeiculoResponseDTO.from(veiculoRepository.save(veiculo));
     }
 
     @Transactional
     public void excluir(Long usuarioId, Long veiculoId) {
         Veiculo veiculo = buscarVeiculo(usuarioId, veiculoId);
+        if(!veiculo.getUsuario().getId().equals(usuarioId)){
+            throw new RegraDeNegocioException(
+                    "O usuário só pode excluir veículos dele mesmo.");
+        }
+
+        if (caronaRepository.existsByVeiculoId(veiculoId)) {
+            throw new RegraDeNegocioException(
+                    "Não é possível excluir este veículo, pois ele já está vinculado a uma ou mais caronas.");
+        }
+
         veiculoRepository.delete(veiculo);
     }
-
     private Veiculo buscarVeiculo(Long usuarioId, Long veiculoId) {
         return veiculoRepository.findByIdAndUsuarioId(veiculoId, usuarioId)
             .orElseThrow(() -> new VeiculoNaoEncontradoException("Veículo não encontrado"));
+    }
+
+    private void validarPlacar(String placa){
+        if(veiculoRepository.existsByPlaca(placa)){
+            throw new RegraDeNegocioException(
+                    "Já existe um veículo com a placa informada.");
+        }
     }
 }

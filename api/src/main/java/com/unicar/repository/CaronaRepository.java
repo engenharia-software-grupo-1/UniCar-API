@@ -71,4 +71,6 @@ public interface CaronaRepository extends JpaRepository<Carona, Long>, JpaSpecif
             LocalDateTime dataHoraPartida,
             List<StatusCarona> statuses
     );
+
+    boolean existsByVeiculoId(Long veiculoID);
 }
