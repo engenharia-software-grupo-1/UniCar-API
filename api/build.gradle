@@ -3,6 +3,7 @@ plugins {
 	id 'org.springframework.boot' version '4.1.0'
 	id 'io.spring.dependency-management' version '1.1.7'
 	id 'jacoco'
+	id 'com.github.spotbugs' version '6.5.9'
 }
 
 group = 'com.unicar'
@@ -51,6 +52,32 @@ dependencies {
 
 jacoco {
     toolVersion = "0.8.13"
+}
+
+spotbugs {
+    effort = com.github.spotbugs.snom.Effort.MAX
+}
+
+tasks.named('spotbugsMain') {
+    reports {
+        html {
+            required = true
+        }
+        xml {
+            required = true
+        }
+    }
+}
+
+tasks.named('spotbugsTest') {
+    reports {
+        html {
+            required = true
+        }
+        xml {
+            required = true
+        }
+    }
 }
 
 tasks.named('test') {
