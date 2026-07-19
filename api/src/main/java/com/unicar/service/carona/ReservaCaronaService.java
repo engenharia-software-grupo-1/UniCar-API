@@ -201,7 +201,7 @@ public class ReservaCaronaService {
         repository.save(reserva);
 
         notificacaoService.dispararNotificacaoSistemica(
-                reserva.getCarona().getMotorista(),
+                reserva.getUsuario(),
                 "Passageiro Removido Da Reserva",
                 NotificacaoTemplates.passageiroRemovidoPeloMotorista(
                         reserva.getCarona()
