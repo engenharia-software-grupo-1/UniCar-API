@@ -25,7 +25,8 @@ public class GlobalExceptionHandler {
             CaronaNaoEncontradaException.class,
             VeiculoNaoEncontradoException.class,
             ReservaNaoEncontradaException.class,
-            InteresseNaoEncontrado.class
+            InteresseNaoEncontrado.class,
+            TrajetoRecorrenteNaoEncontradoException.class
     })
     public ResponseEntity<Map<String, String>> handleNotFoundExceptions(RuntimeException ex) {
         return ResponseEntity

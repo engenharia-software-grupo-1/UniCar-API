@@ -263,6 +263,22 @@ class ReservaCaronaServiceTest {
             assertThrows(CaronaNaoEncontradaException.class, () ->
                     service.solicitar(request, usuarioId));
         }
+
+        @Test
+        @DisplayName("Deve lançar erro quando usuário autenticado não for encontrado")
+        void deveLancarErroQuandoUsuarioNaoForEncontrado() {
+            when(caronaRepository.findByIdForUpdate(caronaId)).thenReturn(Optional.of(carona));
+            when(repository.somarPassageirosPorCaronaEStatus(caronaId, StatusReserva.ACEITA)).thenReturn(0);
+            when(repository.existsByCarona_IdAndUsuario_IdAndStatusIn(eq(caronaId), eq(usuarioId), anyList()))
+                    .thenReturn(false);
+            when(usuarioRepository.findById(usuarioId)).thenReturn(Optional.empty());
+
+            ReservaRequestDTO request = criarRequest(EMBARQUE_COMPATIVEL_LAT, EMBARQUE_COMPATIVEL_LON, 2);
+
+            assertThrows(AcessoNegadoException.class, () -> service.solicitar(request, usuarioId));
+
+            verify(repository, never()).save(any());
+        }
     }
 
     @Nested
@@ -291,6 +307,18 @@ class ReservaCaronaServiceTest {
             ReservaRequestDTO request = criarRequest(EMBARQUE_COMPATIVEL_LAT, EMBARQUE_COMPATIVEL_LON, 2);
 
             assertThrows(CaronaNaoEncontradaException.class, () -> service.simular(request));
+        }
+
+        @Test
+        @DisplayName("Deve lançar erro quando origem e destino da carona forem o mesmo ponto")
+        void deveLancarErroQuandoDistanciaTotalForZero() {
+            carona.setDestinoLatitude(ORIGEM_LAT);
+            carona.setDestinoLongitude(ORIGEM_LON);
+            when(caronaRepository.findById(caronaId)).thenReturn(Optional.of(carona));
+
+            ReservaRequestDTO request = criarRequest(EMBARQUE_COMPATIVEL_LAT, EMBARQUE_COMPATIVEL_LON, 2);
+
+            assertThrows(RegraDeNegocioException.class, () -> service.simular(request));
         }
     }
 
