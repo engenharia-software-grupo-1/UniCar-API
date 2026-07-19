@@ -8,6 +8,7 @@ public record HistoricoPassageiroResponseDTO(
         Long caronaId,
         String origem,
         String destino,
+        Long motoristaId,
         String motorista,
         StatusCarona status,
         LocalDateTime dataViagem,

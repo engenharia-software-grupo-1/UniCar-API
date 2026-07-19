@@ -346,6 +346,9 @@ components:
         destino:
           type: string
           example: UFCG
+        motoristaId:
+          type: integer
+          example: 1
         motorista:
           type: string
           example: João Silva
