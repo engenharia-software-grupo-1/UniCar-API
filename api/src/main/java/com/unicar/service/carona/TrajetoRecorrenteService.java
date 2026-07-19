@@ -10,7 +10,6 @@ import com.unicar.dto.trajeto.TrajetoRecorrenteRecriarRequestDTO;
 import com.unicar.dto.trajeto.TrajetoRecorrenteRecriarResponseDTO;
 import com.unicar.exception.TrajetoRecorrenteNaoEncontradoException;
 import com.unicar.repository.CaronaRepository;
-
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,9 +23,11 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Trajetos recorrentes não têm entidade própria: são calculados em tempo de
- * consulta a partir do histórico de Carona do motorista autenticado, agrupando
- * por origem/destino. Nada aqui é persistido.
+ * Trajetos recorrentes são derivados dinamicamente do histórico de caronas do
+ * motorista autenticado. Não existe entidade nem persistência própria.
+ *
+ * Um trajeto é considerado recorrente quando o motorista realizou pelo menos
+ * duas viagens com a mesma origem e destino.
  */
 @Service
 @RequiredArgsConstructor
@@ -39,29 +40,12 @@ public class TrajetoRecorrenteService {
 
     public List<TrajetoRecorrenteDTO> listar(Long motoristaId) {
         return agruparTrajetosRecorrentes(motoristaId).stream()
-                .map(grupo -> {
-                    Carona modelo = grupo.caronas().getFirst();
-                    return new TrajetoRecorrenteDTO(
-                            grupo.id(),
-                            enderecoOrigem(modelo),
-                            enderecoDestino(modelo),
-                            grupo.caronas().size(),
-                            ultimaUtilizacao(grupo.caronas()));
-                })
+                .map(this::toResumoDTO)
                 .toList();
     }
 
     public TrajetoRecorrenteDetalhesDTO buscar(String id, Long motoristaId) {
-        Grupo grupo = localizarGrupo(id, motoristaId);
-        Carona modelo = grupo.caronas().getFirst();
-
-        return new TrajetoRecorrenteDetalhesDTO(
-                grupo.id(),
-                enderecoOrigem(modelo),
-                enderecoDestino(modelo),
-                grupo.caronas().size(),
-                primeiraUtilizacao(grupo.caronas()),
-                ultimaUtilizacao(grupo.caronas()));
+        return toDetalhesDTO(localizarGrupo(id, motoristaId));
     }
 
     @Transactional
@@ -80,8 +64,7 @@ public class TrajetoRecorrenteService {
                 null
         );
 
-        List<CaronaResponseDTO> caronasCriadas = caronaService.criar(caronaRequest, motoristaId);
-        CaronaResponseDTO caronaCriada = caronasCriadas.getFirst();
+        CaronaResponseDTO caronaCriada = caronaService.criar(caronaRequest, motoristaId).getFirst();
 
         return new TrajetoRecorrenteRecriarResponseDTO(caronaCriada.id(), caronaCriada.status());
     }
@@ -98,15 +81,32 @@ public class TrajetoRecorrenteService {
                 .collect(Collectors.groupingBy(TrajetoKey::from))
                 .entrySet().stream()
                 .filter(entry -> entry.getValue().size() >= MINIMO_VIAGENS_RECORRENTE)
-                .map(entry -> new Grupo(gerarId(entry.getKey()), entry.getValue()))
+                .map(entry -> new Grupo(entry.getKey().id(), entry.getValue()))
                 .sorted(Comparator.comparingInt((Grupo grupo) -> grupo.caronas().size()).reversed())
                 .toList();
     }
 
-    private static String gerarId(TrajetoKey chave) {
-        String chaveTexto = chave.origemLatitude() + "|" + chave.origemLongitude()
-                + "|" + chave.destinoLatitude() + "|" + chave.destinoLongitude();
-        return UUID.nameUUIDFromBytes(chaveTexto.getBytes(StandardCharsets.UTF_8)).toString();
+    private TrajetoRecorrenteDTO toResumoDTO(Grupo grupo) {
+        Carona modelo = grupo.caronas().getFirst();
+
+        return new TrajetoRecorrenteDTO(
+                grupo.id(),
+                enderecoOrigem(modelo),
+                enderecoDestino(modelo),
+                grupo.caronas().size(),
+                ultimaUtilizacao(grupo.caronas()));
+    }
+
+    private TrajetoRecorrenteDetalhesDTO toDetalhesDTO(Grupo grupo) {
+        Carona modelo = grupo.caronas().getFirst();
+
+        return new TrajetoRecorrenteDetalhesDTO(
+                grupo.id(),
+                enderecoOrigem(modelo),
+                enderecoDestino(modelo),
+                grupo.caronas().size(),
+                primeiraUtilizacao(grupo.caronas()),
+                ultimaUtilizacao(grupo.caronas()));
     }
 
     private static EnderecoDTO enderecoOrigem(Carona carona) {
@@ -131,6 +131,13 @@ public class TrajetoRecorrenteService {
             return new TrajetoKey(
                     carona.getOrigemLatitude(), carona.getOrigemLongitude(),
                     carona.getDestinoLatitude(), carona.getDestinoLongitude());
+        }
+
+        String id() {
+            String chaveTexto = origemLatitude + "|" + origemLongitude
+                    + "|" + destinoLatitude + "|" + destinoLongitude;
+
+            return UUID.nameUUIDFromBytes(chaveTexto.getBytes(StandardCharsets.UTF_8)).toString();
         }
     }
 

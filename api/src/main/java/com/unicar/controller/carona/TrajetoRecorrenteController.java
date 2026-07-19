@@ -50,7 +50,7 @@ public class TrajetoRecorrenteController {
     }
 
     @PostMapping("/{id}/recriar")
-    @Operation(summary = "Cria uma nova carona reutilizando origem e destino de um trajeto recorrente")
+    @Operation(summary = "Cria uma nova carona a partir de um trajeto recorrente")
     public ResponseEntity<TrajetoRecorrenteRecriarResponseDTO> recriar(
             @PathVariable String id,
             @Valid @RequestBody TrajetoRecorrenteRecriarRequestDTO request,
