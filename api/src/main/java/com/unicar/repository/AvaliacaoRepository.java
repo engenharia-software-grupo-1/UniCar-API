@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface AvaliacaoRepository extends JpaRepository<Avaliacao, Long> {
 
-    List<Avaliacao> findByAvaliadoId(Long avaliadoId);
+    List<Avaliacao> findByAvaliadoIdOrderByDataAvaliacaoDesc(Long avaliadoId);
 
     boolean existsByCaronaIdAndAvaliadorIdAndAvaliadoId(Long caronaId, Long avaliadorId, Long avaliadoId);
 
