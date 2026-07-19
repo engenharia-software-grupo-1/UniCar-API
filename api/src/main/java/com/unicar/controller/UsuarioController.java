@@ -1,6 +1,7 @@
 package com.unicar.controller;
 
 import com.unicar.dto.usuario.PerfilUsuarioDTO;
+import com.unicar.dto.usuario.UpdateFotoPerfilRequestDTO;
 import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
 import com.unicar.dto.usuario.UsuarioDTO;
 import com.unicar.security.UsuarioDetails;
@@ -49,5 +50,19 @@ public class UsuarioController {
     @Operation(summary = "Lista perfil público de um usuário")
     public ResponseEntity<PerfilUsuarioDTO> perfilPublico(@PathVariable Long id, @AuthenticationPrincipal UsuarioDetails usuarioDetails){
         return ResponseEntity.ok(usuarioService.perfilPublico(id));
+    }
+
+    @PatchMapping("/me/foto")
+    @Operation(summary = "Atualiza a foto de perfil")
+    public ResponseEntity<UsuarioDTO> atualizarFoto(
+            @AuthenticationPrincipal UsuarioDetails userDetails,
+            @RequestBody @Valid UpdateFotoPerfilRequestDTO request
+    ) {
+        return ResponseEntity.ok(
+                usuarioService.atualizarFoto(
+                        userDetails.getUsuario().getId(),
+                        request
+                )
+        );
     }
 }
