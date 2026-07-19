@@ -44,8 +44,8 @@ public class AvaliacaoService {
         Carona carona = buscarCarona(dto.caronaId());
 
         validarNota(dto.nota());
-        validarCaronaFinalizada(carona);
         validarParticipacao(carona, avaliador.getId(), avaliado.getId());
+        validarCaronaFinalizada(carona);
         validarNaoAvaliouAntes(carona.getId(), avaliador.getId(), avaliado.getId());
 
         Avaliacao avaliacao = Avaliacao.builder()
