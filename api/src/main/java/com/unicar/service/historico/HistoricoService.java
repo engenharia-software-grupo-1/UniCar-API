@@ -58,6 +58,7 @@ public class HistoricoService {
                     carona.getId(),
                     carona.getOrigemDescricao(),
                     carona.getDestinoDescricao(),
+                    carona.getMotorista().getId(),
                     carona.getMotorista().getNome(),
                     carona.getStatus(),
                     carona.getDataHoraPartida(),
