@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -25,14 +26,12 @@ public class ChatService {
         return chats.stream()
                 .map(chat -> {
                     Long passageiroId = chat.getReserva().getUsuario().getId();
-                    // Define o nome do outro participante do chat
                     String nomeParticipante = usuarioAutenticadoId.equals(passageiroId)
                             ? chat.getReserva().getCarona().getMotorista().getNome()
                             : chat.getReserva().getUsuario().getNome();
 
-                    // Por enquanto, passamos valores padrão para o topo do fluxo (ou você pode injetar o MensagemRepository para buscá-los)
                     String ultimaMensagem = "Clique para abrir a conversa";
-                    java.time.LocalDateTime dataUltimaMensagem = chat.getDataCriacao();
+                    LocalDateTime dataUltimaMensagem = chat.getDataCriacao();
                     Integer mensagensNaoLidas = 0;
 
                     return new ChatDTO(
