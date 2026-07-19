@@ -6,6 +6,7 @@ import com.unicar.dto.historico.DetalhesHistoricoResponseDTO;
 import com.unicar.dto.historico.HistoricoMotoristaResponseDTO;
 import com.unicar.dto.historico.HistoricoPassageiroResponseDTO;
 import com.unicar.dto.historico.ParticipanteResumoDTO;
+import com.unicar.enums.StatusCarona;
 import com.unicar.enums.StatusReserva;
 import com.unicar.repository.CaronaRepository;
 import com.unicar.repository.ReservaCaronaRepository;
@@ -26,11 +27,13 @@ public class HistoricoService {
     private final CaronaRepository caronaRepository;
     private final ReservaCaronaRepository reservaCaronaRepository;
 
+    private static final List<StatusReserva> STATUS_PASSAGEIROS_VALIDOS = List.of(StatusReserva.ACEITA, StatusReserva.CONCLUIDA);
+
     @Transactional(readOnly = true)
     public Page<HistoricoMotoristaResponseDTO> listarHistoricoComoMotorista(Long usuarioId, Pageable pageable) {
         Page<Carona> caronas = caronaRepository.findHistoricoComoMotorista(usuarioId, pageable);
         return caronas.map(carona -> {
-            int totalPassageiros = reservaCaronaRepository.somarPassageirosPorCaronaEStatus(carona.getId(), StatusReserva.ACEITA);
+            int totalPassageiros = reservaCaronaRepository.somarPassageirosPorCaronaEStatusIn(carona.getId(), STATUS_PASSAGEIROS_VALIDOS);
 
             return new HistoricoMotoristaResponseDTO(
                     carona.getId(),
@@ -48,7 +51,7 @@ public class HistoricoService {
         Page<ReservaCarona> reservas = reservaCaronaRepository.findHistoricoComoPassageiro(usuarioId, pageable);
         return reservas.map(reserva -> {
             Carona carona = reserva.getCarona();
-            int quantPassageiros = reservaCaronaRepository.somarPassageirosPorCaronaEStatus(carona.getId(), StatusReserva.ACEITA);
+            int quantPassageiros = reservaCaronaRepository.somarPassageirosPorCaronaEStatusIn(carona.getId(), STATUS_PASSAGEIROS_VALIDOS);
 
             return new HistoricoPassageiroResponseDTO(
                     reserva.getId(),
@@ -69,11 +72,15 @@ public class HistoricoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Histórico ou carona não encontrada."));
 
         boolean isMotorista = carona.getMotorista().getId().equals(usuarioId);
-
         boolean isPassageiro = reservaCaronaRepository.existsByCaronaIdAndUsuarioId(caronaId, usuarioId);
 
         if (!isMotorista && !isPassageiro) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado: você não participou desta viagem.");
+        }
+
+
+        if (carona.getStatus() != StatusCarona.FINALIZADA) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Esta viagem ainda não foi finalizada.");
         }
 
         ParticipanteResumoDTO motoristaDTO = new ParticipanteResumoDTO(
@@ -81,7 +88,7 @@ public class HistoricoService {
                 carona.getMotorista().getNome()
         );
 
-        List<ReservaCarona> reservasAceitas = reservaCaronaRepository.findByCaronaIdAndStatus(carona.getId(), StatusReserva.ACEITA);
+        List<ReservaCarona> reservasAceitas = reservaCaronaRepository.findByCaronaIdAndStatusIn(carona.getId(), STATUS_PASSAGEIROS_VALIDOS);
 
         List<ParticipanteResumoDTO> passageirosDTO = reservasAceitas.stream()
                 .map(r -> new ParticipanteResumoDTO(r.getUsuario().getId(), r.getUsuario().getNome()))

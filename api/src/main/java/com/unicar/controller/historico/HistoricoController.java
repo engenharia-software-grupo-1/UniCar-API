@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -27,26 +28,28 @@ public class HistoricoController {
 
     @GetMapping("/motorista")
     @Operation(summary = "Consulta o histórico de caronas do usuário autenticado como motorista")
-    public ResponseEntity<Page<HistoricoMotoristaResponseDTO>> listarComoMotorista(
+    public ResponseEntity<PagedModel<HistoricoMotoristaResponseDTO>> listarComoMotorista(
             @AuthenticationPrincipal UsuarioDetails userDetails,
             @PageableDefault(size = 10) Pageable pageable
     ) {
-        return ResponseEntity.ok(historicoService.listarHistoricoComoMotorista(
+        Page<HistoricoMotoristaResponseDTO> pagina = historicoService.listarHistoricoComoMotorista(
                 userDetails.getUsuario().getId(),
                 pageable
-        ));
+        );
+        return ResponseEntity.ok(new PagedModel<>(pagina));
     }
 
     @GetMapping("/passageiro")
     @Operation(summary = "Consulta o histórico de caronas do usuário autenticado como passageiro")
-    public ResponseEntity<Page<HistoricoPassageiroResponseDTO>> listarComoPassageiro(
+    public ResponseEntity<PagedModel<HistoricoPassageiroResponseDTO>> listarComoPassageiro(
             @AuthenticationPrincipal UsuarioDetails userDetails,
             @PageableDefault(size = 10) Pageable pageable
     ) {
-        return ResponseEntity.ok(historicoService.listarHistoricoComoPassageiro(
+        Page<HistoricoPassageiroResponseDTO> pagina = historicoService.listarHistoricoComoPassageiro(
                 userDetails.getUsuario().getId(),
                 pageable
-        ));
+        );
+        return ResponseEntity.ok(new PagedModel<>(pagina));
     }
 
     @GetMapping("/{caronaId}")
