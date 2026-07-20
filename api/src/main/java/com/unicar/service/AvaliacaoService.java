@@ -167,6 +167,10 @@ public class AvaliacaoService {
         return pendentes;
     }
 
+    public Long contaAvaliacoes(Long id){
+        return avaliacaoRepository.countByAvaliadoId(id);
+    }
+
     private Usuario buscarUsuario(Long id) {
         return usuarioRepository.findById(id)
                 .orElseThrow(() -> new UsuarioNaoEncontradoException("Usuário não encontrado."));

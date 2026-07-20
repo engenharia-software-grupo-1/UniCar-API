@@ -106,7 +106,8 @@ class UsuarioControllerTest {
                     true,
                     "https://teste.com/foto.png",
                     LocalDateTime.now(),
-                    LocalDateTime.now()
+                    LocalDateTime.now(),
+                    0L
             );
 
             when(usuarioService.buscarPerfil(1L)).thenReturn(dto);
@@ -142,7 +143,8 @@ class UsuarioControllerTest {
                     false,
                     "https://teste.com/foto.png",
                     LocalDateTime.now(),
-                    LocalDateTime.now()
+                    LocalDateTime.now(),
+                    0L
             );
  
             when(usuarioService.atualizarPerfil(eq(1L), any(UpdatePerfilRequestDTO.class)))

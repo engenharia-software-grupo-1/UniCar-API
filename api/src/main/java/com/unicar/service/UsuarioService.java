@@ -1,6 +1,7 @@
 package com.unicar.service;
 
 import com.unicar.domain.Usuario;
+import com.unicar.dto.avaliacao.ReputacaoDTO;
 import com.unicar.dto.usuario.PerfilUsuarioDTO;
 import com.unicar.dto.usuario.UpdateFotoPerfilRequestDTO;
 import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
@@ -24,7 +25,10 @@ public class UsuarioService {
     private final CaronaService caronaService;
 
     public UsuarioDTO buscarPerfil(Long usuarioId) {
-        return UsuarioDTO.from(buscarUsuarioAtivo(usuarioId));
+        Usuario usuario = buscarUsuarioAtivo(usuarioId);
+        Long reputacao = avaliacaoService.contaAvaliacoes(usuarioId);
+
+        return UsuarioDTO.from(usuario, reputacao);
     }
 
     public PerfilUsuarioDTO perfilPublico(Long id) {
