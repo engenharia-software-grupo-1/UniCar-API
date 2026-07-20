@@ -17,9 +17,9 @@ public record UsuarioDTO(
     String linkFoto,
     LocalDateTime dataCriacao,
     LocalDateTime dataAtualizacao,
-    Long avaliacao
+    Double avaliacao
 ) {
-    public static UsuarioDTO from(Usuario usuario, Long reputacao) {
+    public static UsuarioDTO from(Usuario usuario, Double reputacao) {
         return new UsuarioDTO(
             usuario.getId(),
             usuario.getMatricula(),
@@ -49,7 +49,7 @@ public record UsuarioDTO(
                 usuario.getLinkFoto(),
                 usuario.getDataCriacao(),
                 usuario.getDataAtualizacao(),
-                0L
+                0.0
         );
     }
 }

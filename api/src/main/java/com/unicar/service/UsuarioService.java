@@ -26,7 +26,7 @@ public class UsuarioService {
 
     public UsuarioDTO buscarPerfil(Long usuarioId) {
         Usuario usuario = buscarUsuarioAtivo(usuarioId);
-        Long reputacao = avaliacaoService.contaAvaliacoes(usuarioId);
+        Double reputacao = avaliacaoService.buscarReputacao(usuarioId).media();
 
         return UsuarioDTO.from(usuario, reputacao);
     }

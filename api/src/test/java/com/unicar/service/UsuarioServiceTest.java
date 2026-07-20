@@ -22,6 +22,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -77,6 +78,14 @@ class UsuarioServiceTest {
         @DisplayName("deve retornar o perfil quando o usuário existe e está ativo")
         void deveBuscarPerfil() {
             when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+
+            when(avaliacaoService.buscarReputacao(1L))
+                    .thenReturn(new ReputacaoDTO(
+                            1L,
+                            4.8,
+                            15L,
+                            List.of()
+                    ));
 
             UsuarioDTO dto = usuarioService.buscarPerfil(1L);
 

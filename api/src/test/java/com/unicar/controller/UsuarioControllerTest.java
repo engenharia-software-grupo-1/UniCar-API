@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.LocalDateTime;
 
 import com.unicar.dto.usuario.PerfilUsuarioDTO;
+import com.unicar.repository.AvaliacaoRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,6 +52,9 @@ class UsuarioControllerTest {
  
     @MockitoBean
     private UsuarioService usuarioService;
+
+    @MockitoBean
+    private AvaliacaoRepository avaliacaoRepository;
  
     @MockitoBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -107,7 +111,7 @@ class UsuarioControllerTest {
                     "https://teste.com/foto.png",
                     LocalDateTime.now(),
                     LocalDateTime.now(),
-                    0L
+                    0.0
             );
 
             when(usuarioService.buscarPerfil(1L)).thenReturn(dto);
@@ -144,7 +148,7 @@ class UsuarioControllerTest {
                     "https://teste.com/foto.png",
                     LocalDateTime.now(),
                     LocalDateTime.now(),
-                    0L
+                    0.0
             );
  
             when(usuarioService.atualizarPerfil(eq(1L), any(UpdatePerfilRequestDTO.class)))
