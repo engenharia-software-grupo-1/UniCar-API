@@ -25,6 +25,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -98,7 +99,7 @@ class HistoricoControllerTest {
         @DisplayName("deve retornar o histórico paginado do usuário autenticado como passageiro")
         void deveListarHistoricoComoPassageiro() throws Exception {
             HistoricoPassageiroResponseDTO item = new HistoricoPassageiroResponseDTO(
-                    10L, 1L, "Bodocongó", "UFCG", "João Motorista", StatusCarona.FINALIZADA, LocalDateTime.now(), 2);
+                    10L, 1L, "Bodocongó", "UFCG", 99L, "João Motorista", null, StatusCarona.FINALIZADA, LocalDateTime.now(), 2);
 
             when(historicoService.listarHistoricoComoPassageiro(eq(usuarioId), any()))
                     .thenReturn(new PageImpl<>(List.of(item), PageRequest.of(0, 10), 1));
@@ -122,10 +123,11 @@ class HistoricoControllerTest {
         void deveRetornarDetalhesDaViagem() throws Exception {
             DetalhesHistoricoResponseDTO response = new DetalhesHistoricoResponseDTO(
                     1L, "Bodocongó", "UFCG",
-                    new ParticipanteResumoDTO(usuarioId, "Joao"),
+                    new ParticipanteResumoDTO(usuarioId, "Joao", null),
                     StatusCarona.FINALIZADA,
                     LocalDateTime.now(),
-                    List.of(new ParticipanteResumoDTO(20L, "Maria"))
+                    List.of(new ParticipanteResumoDTO(20L, "Maria", null)),
+                    new BigDecimal("10.00")
             );
 
             when(historicoService.obterDetalhesViagem(1L, usuarioId)).thenReturn(response);

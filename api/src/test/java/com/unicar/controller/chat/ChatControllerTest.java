@@ -84,7 +84,7 @@ class ChatControllerTest {
         @DisplayName("deve retornar os chats do usuario autenticado")
         void deveListarChatsDoUsuarioAutenticado() throws Exception {
             List<ChatDTO> chats = List.of(
-                    new ChatDTO(1L, 10L, "Maria Passageira", "Oi, tudo bem?", LocalDateTime.now(), 2)
+                    new ChatDTO(1L, 10L, "Maria Passageira", null, "Oi, tudo bem?", LocalDateTime.now(), 2)
             );
 
             when(chatService.listarChatsDoUsuario(usuarioId)).thenReturn(chats);

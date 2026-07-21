@@ -9,6 +9,7 @@ public record UsuarioBloqueadoDTO(
         Long id,
         String nome,
         String curso,
+        String linkFoto,
         LocalDateTime dataBloqueio
 ) {
 
@@ -19,6 +20,7 @@ public record UsuarioBloqueadoDTO(
                 usuario.getId(),
                 usuario.getNome(),
                 usuario.getCurso(),
+                usuario.getLinkFoto(),
                 bloqueio.getDataBloqueio()
         );
     }

@@ -90,6 +90,7 @@ class CaronaControllerTest {
                             1L,
                             USUARIO_ID,
                             "João",
+                            null,
                             5,
                             new EnderecoDTO(
                                     "Rua das Flores, 123",
@@ -156,7 +157,7 @@ class CaronaControllerTest {
                     1L,
                     new EnderecoDTO("Partage Shopping", new java.math.BigDecimal("-7.2349"), new java.math.BigDecimal("-35.8692")),
                     new EnderecoDTO("UFCG", new java.math.BigDecimal("-7.2145"), new java.math.BigDecimal("-35.9087")),
-                    new MotoristaBuscaDTO(3L, "Jennifer", "FEMININO", "Ciência da Computação", 4.0),
+                    new MotoristaBuscaDTO(3L, "Jennifer", "FEMININO", "Ciência da Computação", null, 4.0),
                     java.time.LocalDateTime.parse("2026-07-22T07:30:00"),
                     4,
                     new java.math.BigDecimal("2.00")

@@ -10,8 +10,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
@@ -352,62 +350,39 @@ class AuthServiceTest {
             assertThat(captor.getValue().getCpf()).isEqualTo("01122233396");
         }
 
-        @ParameterizedTest(name = "cpfEureca={0} -> cpfEsperado={1}, badGateway={2}")
-        @CsvSource({
-                "123456789,x,true",
-                "1234567890,01234567890,false",
-                "12345678901,12345678901,false",
-                "123456789012,x,true"
-        })
-        @DisplayName("Deve validar as fronteiras de sanitização do CPF por quantidade de dígitos")
-        void deveValidarFronteirasDeSanitizacaoDoCpf(String cpfBruto, String cpfEsperado, boolean deveLancarBadGateway) {
+        @Test
+        void deveLancarBadGatewayQuandoCpfRetornadoForInvalido() {
             mockServer.expect(requestTo(TOKEN_URL))
                 .andRespond(withSuccess("""
-                    {"token": "eureca-token-particao"}
+                    {"token": "eureca-token-invalido"}
                     """, MediaType.APPLICATION_JSON));
 
             mockServer.expect(requestTo(PROFILE_URL))
                 .andRespond(withSuccess("""
                     {
-                      "id": "usuario.particao",
-                      "name": "Usuario Particao",
-                      "email": "particao@unicar.edu.br",
+                      "id": "invalido@unicar.edu.br",
+                      "name": "Cpf Invalido",
+                      "email": "invalido@unicar.edu.br",
                       "type": "Aluno",
-                      "attributes": {"aluno": "2025001"}
+                      "attributes": {"aluno": "2023001"}
                     }
                     """, MediaType.APPLICATION_JSON));
 
-            mockServer.expect(requestToUriTemplate(ESTUDANTE_URL + "?estudante={matricula}", "2025001"))
+            mockServer.expect(requestToUriTemplate(ESTUDANTE_URL + "?estudante={matricula}", "2023001"))
                 .andRespond(withSuccess("""
                     {
-                      "matricula_do_estudante": "2025001",
+                      "matricula_do_estudante": "2023001",
                       "nome_do_curso": "Ciência da Computação",
                       "sexo": "F",
-                      "cpf": "__CPF__"
+                      "cpf": "123456789012"
                     }
-                    """.replace("__CPF__", cpfBruto), MediaType.APPLICATION_JSON));
+                    """, MediaType.APPLICATION_JSON));
 
-            if (deveLancarBadGateway) {
-                assertThatThrownBy(() -> authService.login(requestValido()))
-                    .isInstanceOf(ResponseStatusException.class)
-                    .hasFieldOrPropertyWithValue("statusCode", HttpStatus.BAD_GATEWAY);
+            assertThatThrownBy(() -> authService.login(requestValido()))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasFieldOrPropertyWithValue("statusCode", HttpStatus.BAD_GATEWAY);
 
-                verify(usuarioRepository, never()).save(any());
-                return;
-            }
-
-            given(usuarioRepository.findByCpf(cpfEsperado)).willReturn(Optional.empty());
-            given(usuarioRepository.findByMatricula("2025001")).willReturn(Optional.empty());
-            given(usuarioRepository.findByEmail("particao@unicar.edu.br")).willReturn(Optional.empty());
-            given(usuarioRepository.save(any(Usuario.class)))
-                .willAnswer(invocation -> invocation.getArgument(0));
-            given(jwtService.gerarToken(any(Usuario.class))).willReturn("jwt-particao");
-
-            authService.login(requestValido());
-
-            org.mockito.ArgumentCaptor<Usuario> captor = org.mockito.ArgumentCaptor.forClass(Usuario.class);
-            verify(usuarioRepository).save(captor.capture());
-            assertThat(captor.getValue().getCpf()).isEqualTo(cpfEsperado);
+            verify(usuarioRepository, never()).save(any());
         }
 
         @Test

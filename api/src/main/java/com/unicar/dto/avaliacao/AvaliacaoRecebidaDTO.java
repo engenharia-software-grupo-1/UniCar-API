@@ -21,7 +21,8 @@ public record AvaliacaoRecebidaDTO(
                 avaliacao.getDataAvaliacao(),
                 new AvaliadorDTO(
                         avaliacao.getAvaliador().getId(),
-                        avaliacao.getAvaliador().getNome()
+                        avaliacao.getAvaliador().getNome(),
+                        avaliacao.getAvaliador().getLinkFoto()
                 ),
                 new CaronaResumoDTO(
                         avaliacao.getCarona().getId()
@@ -31,7 +32,8 @@ public record AvaliacaoRecebidaDTO(
 
     public record AvaliadorDTO(
             Long id,
-            String nome
+            String nome,
+            String linkFoto
     ) {}
 
     public record CaronaResumoDTO(

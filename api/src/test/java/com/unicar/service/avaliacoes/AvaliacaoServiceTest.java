@@ -61,6 +61,7 @@ class AvaliacaoServiceTest {
         motorista = new Usuario();
         motorista.setId(1L);
         motorista.setNome("Motorista");
+        motorista.setLinkFoto("https://cdn.exemplo.com/motorista.jpg");
 
         passageiro = new Usuario();
         passageiro.setId(2L);
@@ -193,6 +194,7 @@ class AvaliacaoServiceTest {
 
             assertEquals(1, resultado.size());
             assertEquals(5, resultado.getFirst().nota());
+            assertEquals("https://cdn.exemplo.com/motorista.jpg", resultado.getFirst().avaliador().linkFoto());
         }
 
         @Test
