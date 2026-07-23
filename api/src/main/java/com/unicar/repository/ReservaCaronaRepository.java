@@ -1,6 +1,7 @@
 package com.unicar.repository;
 
 import com.unicar.domain.ReservaCarona;
+import com.unicar.enums.StatusCarona;
 import com.unicar.enums.StatusReserva;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
@@ -47,11 +48,15 @@ public interface ReservaCaronaRepository extends JpaRepository<ReservaCarona, Lo
     List<ReservaCarona> buscarReservasPendentesExpiradasParaAtualizacao(@Param("agora") LocalDateTime agora);
 
     @Query("SELECT r FROM ReservaCarona r " +
-            "JOIN r.carona c " +
-            "WHERE r.usuario.id = :passageiroId " +
-            "AND c.status = com.unicar.enums.StatusCarona.FINALIZADA " +
-            "ORDER BY c.dataHoraPartida DESC")
-    Page<ReservaCarona> findHistoricoComoPassageiro(@Param("passageiroId") Long passageiroId, Pageable pageable);
+        "JOIN r.carona c " +
+        "WHERE r.usuario.id = :passageiroId " +
+        "AND r.status IN :statusList " +
+        "AND c.status IN :statusCaronaList " +
+        "ORDER BY c.dataHoraPartida DESC")
+	Page<ReservaCarona> findHistoricoComoPassageiro(@Param("passageiroId") Long passageiroId,
+                                                    @Param("statusList") List<StatusReserva> statusList,
+                                                    @Param("statusCaronaList") List<StatusCarona> statusCaronaList,
+                                                    Pageable pageable);
 
     long countByUsuarioIdAndStatus(
             Long usuarioId,

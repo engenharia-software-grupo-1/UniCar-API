@@ -27,13 +27,14 @@ public class HistoricoService {
     private final CaronaRepository caronaRepository;
     private final ReservaCaronaRepository reservaCaronaRepository;
 
-    private static final List<StatusReserva> STATUS_VALIDOS_HISTORICO = List.of(StatusReserva.CANCELADA, StatusReserva.CONCLUIDA);
+    private static final List<StatusReserva> STATUS_RESERVA_HISTORICO = List.of(StatusReserva.CANCELADA, StatusReserva.CONCLUIDA);
+    private static final List<StatusCarona> STATUS_CARONA_HISTORICO = List.of(StatusCarona.FINALIZADA, StatusCarona.CANCELADA);
 
     @Transactional(readOnly = true)
     public Page<HistoricoMotoristaResponseDTO> listarHistoricoComoMotorista(Long usuarioId, Pageable pageable) {
-        Page<Carona> caronas = caronaRepository.findHistoricoComoMotorista(usuarioId, pageable);
+        Page<Carona> caronas = caronaRepository.findHistoricoComoMotorista(usuarioId, STATUS_CARONA_HISTORICO, pageable);
         return caronas.map(carona -> {
-            int totalPassageiros = reservaCaronaRepository.somarPassageirosPorCaronaEStatusIn(carona.getId(), STATUS_VALIDOS_HISTORICO);
+            int totalPassageiros = reservaCaronaRepository.somarPassageirosPorCaronaEStatusIn(carona.getId(), List.of(StatusReserva.CONCLUIDA));
 
             return new HistoricoMotoristaResponseDTO(
                     carona.getId(),
@@ -48,10 +49,10 @@ public class HistoricoService {
 
     @Transactional(readOnly = true)
     public Page<HistoricoPassageiroResponseDTO> listarHistoricoComoPassageiro(Long usuarioId, Pageable pageable) {
-        Page<ReservaCarona> reservas = reservaCaronaRepository.findHistoricoComoPassageiro(usuarioId, pageable);
+        Page<ReservaCarona> reservas = reservaCaronaRepository.findHistoricoComoPassageiro(usuarioId, STATUS_RESERVA_HISTORICO, STATUS_CARONA_HISTORICO, pageable);
         return reservas.map(reserva -> {
             Carona carona = reserva.getCarona();
-            int quantPassageiros = reservaCaronaRepository.somarPassageirosPorCaronaEStatusIn(carona.getId(), STATUS_VALIDOS_HISTORICO);
+            int quantPassageiros = reservaCaronaRepository.somarPassageirosPorCaronaEStatusIn(carona.getId(), List.of(StatusReserva.CONCLUIDA));
 
             return new HistoricoPassageiroResponseDTO(
                     reserva.getId(),
@@ -74,7 +75,7 @@ public class HistoricoService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Histórico ou carona não encontrada."));
 
         boolean isMotorista = carona.getMotorista().getId().equals(usuarioId);
-        boolean isPassageiro = reservaCaronaRepository.existsByCaronaIdAndUsuarioId(caronaId, usuarioId);
+        boolean isPassageiro = reservaCaronaRepository.existsByCarona_IdAndUsuario_IdAndStatusIn(caronaId, usuarioId, STATUS_RESERVA_HISTORICO);
 
         if (!isMotorista && !isPassageiro) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado: você não participou desta viagem.");
@@ -90,7 +91,7 @@ public class HistoricoService {
                 carona.getMotorista().getLinkFoto()
         );
 
-        List<ReservaCarona> reservasAceitas = reservaCaronaRepository.findByCaronaIdAndStatusIn(carona.getId(), STATUS_VALIDOS_HISTORICO);
+        List<ReservaCarona> reservasAceitas = reservaCaronaRepository.findByCaronaIdAndStatusIn(carona.getId(), STATUS_RESERVA_HISTORICO);
 
         List<ParticipanteResumoDTO> passageirosDTO = reservasAceitas.stream()
                 .map(r -> new ParticipanteResumoDTO(

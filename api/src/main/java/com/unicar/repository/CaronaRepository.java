@@ -47,10 +47,12 @@ public interface CaronaRepository extends JpaRepository<Carona, Long>, JpaSpecif
             @Param("raioMetros") double raioMetros);
 
     @Query("SELECT c FROM Carona c " +
-            "WHERE c.motorista.id = :motoristaId " +
-            "AND c.status = com.unicar.enums.StatusCarona.FINALIZADA " +
-            "ORDER BY c.dataHoraPartida DESC")
-    Page<Carona> findHistoricoComoMotorista(@Param("motoristaId") Long motoristaId, Pageable pageable);
+        "WHERE c.motorista.id = :motoristaId " +
+        "AND c.status IN :statusList " +
+        "ORDER BY c.dataHoraPartida DESC")
+    Page<Carona> findHistoricoComoMotorista(@Param("motoristaId") Long motoristaId,
+                                        @Param("statusList") List<StatusCarona> statusList,
+                                        Pageable pageable);
 
     interface CaronaProximaProjection {
         Long getId();
