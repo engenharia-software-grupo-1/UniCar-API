@@ -693,6 +693,8 @@ class ReservaCaronaServiceTest {
             ReservaStatusResponseDTO response = service.cancelar(reservaId, motoristaId);
 
             assertEquals(StatusReserva.CANCELADA, response.status());
+            verify(notificacaoService).dispararNotificacaoSistemica(
+                    eq(usuario), anyString(), anyString(), eq(TipoNotificacao.RESERVA_CANCELADA));
         }
 
         @Test
@@ -834,7 +836,7 @@ class ReservaCaronaServiceTest {
         }
 
         @Test
-        @DisplayName("Não deve remover reserva de outro usuário")
+        @DisplayName("Não deve remover reserva quando quem chama não é o motorista dono da carona")
         void naoDeveRemoverReservaDeOutroUsuario() {
 
 
@@ -850,7 +852,7 @@ class ReservaCaronaServiceTest {
                     () ->
                             service.removerReservaPassageiro(
                                     reservaId,
-                                    outroUsuarioId
+                                    usuarioId
                             )
             );
 

@@ -83,17 +83,6 @@ public class UsuarioService {
         return usuario;
     }
 
-    private Usuario buscarUsuarioAtivo(String matricula) {
-        Usuario usuario = usuarioRepository.findByMatricula(matricula)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Usuário não encontrado"
-                ));
-
-        validarUsuarioAtivo(usuario);
-
-        return usuario;
-    }
     private void validarUsuarioAtivo(Usuario usuario) {
         if (!Boolean.TRUE.equals(usuario.getAtivo())) {
             throw new ResponseStatusException(

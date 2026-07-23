@@ -3,6 +3,7 @@ package com.unicar.domain;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 import com.unicar.enums.Genero;
@@ -13,8 +14,8 @@ import com.unicar.enums.Genero;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-public class Usuario {
+@Builder(toBuilder = true)
+public class Usuario implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

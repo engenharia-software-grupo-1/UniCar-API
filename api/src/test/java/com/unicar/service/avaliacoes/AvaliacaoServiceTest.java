@@ -21,6 +21,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -108,6 +110,38 @@ class AvaliacaoServiceTest {
 
             assertThrows(RegraDeNegocioException.class, () -> avaliacaoService.avaliar(1L, dto));
             verify(avaliacaoRepository, never()).save(any());
+        }
+
+        @ParameterizedTest(name = "nota={0} -> aceita={1}")
+        @CsvSource({
+                "0,false",
+                "1,true",
+                "3,true",
+                "5,true",
+                "6,false"
+        })
+        @DisplayName("Deve validar limites da nota (1 a 5)")
+        void notaLimiteDeAvaliacao(int nota, boolean deveSerAceita) {
+
+            AvaliacaoRequestDTO dto = new AvaliacaoRequestDTO(1L, 2L, nota, "");
+
+            when(usuarioRepository.findById(1L)).thenReturn(Optional.of(motorista));
+            when(usuarioRepository.findById(2L)).thenReturn(Optional.of(passageiro));
+            when(caronaRepository.findById(1L)).thenReturn(Optional.of(carona));
+
+            if (deveSerAceita) {
+                when(reservaCaronaRepository.existsByCaronaIdAndUsuarioId(1L, 1L)).thenReturn(false);
+                when(reservaCaronaRepository.existsByCaronaIdAndUsuarioId(1L, 2L)).thenReturn(true);
+                when(avaliacaoRepository.existsByCaronaIdAndAvaliadorIdAndAvaliadoId(1L, 1L, 2L)).thenReturn(false);
+                when(avaliacaoRepository.save(any(Avaliacao.class)))
+                        .thenReturn(Avaliacao.builder().id(100L).build());
+
+                assertDoesNotThrow(() -> avaliacaoService.avaliar(1L, dto));
+                verify(avaliacaoRepository).save(any(Avaliacao.class));
+            } else {
+                assertThrows(RegraDeNegocioException.class, () -> avaliacaoService.avaliar(1L, dto));
+                verify(avaliacaoRepository, never()).save(any());
+            }
         }
 
         @Test

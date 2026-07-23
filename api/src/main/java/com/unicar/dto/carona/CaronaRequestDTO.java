@@ -5,6 +5,8 @@ import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public record CaronaRequestDTO(
@@ -36,4 +38,13 @@ public record CaronaRequestDTO(
 
     @Size(max = 255, message = "A observação deve ter no máximo 255 caracteres")
     String observacao
-) {}
+) {
+    public CaronaRequestDTO {
+        // Não usa List.copyOf: a lista pode legitimamente conter elementos nulos
+        // até a validação de bean (@NotNull por elemento) rodar e reportar o erro
+        // com a mensagem correta, em vez de estourar NPE na cópia.
+        datasHorasSaida = datasHorasSaida == null
+                ? null
+                : Collections.unmodifiableList(new ArrayList<>(datasHorasSaida));
+    }
+}

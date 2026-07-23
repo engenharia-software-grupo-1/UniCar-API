@@ -14,11 +14,11 @@ public class UsuarioDetails implements UserDetails {
     private final Usuario usuario;
 
     public UsuarioDetails(Usuario usuario) {
-        this.usuario = usuario;
+        this.usuario = usuario.toBuilder().build();
     }
 
     public Usuario getUsuario() {
-        return usuario;
+        return usuario.toBuilder().build();
     }
 
     @Override

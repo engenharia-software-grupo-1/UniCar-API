@@ -3,6 +3,9 @@ plugins {
 	id 'org.springframework.boot' version '4.1.0'
 	id 'io.spring.dependency-management' version '1.1.7'
 	id 'jacoco'
+	id 'com.github.spotbugs' version '6.5.9'
+	id 'pmd'
+	id 'info.solidsoft.pitest' version '1.19.0'
 }
 
 group = 'com.unicar'
@@ -52,6 +55,66 @@ dependencies {
 
 jacoco {
     toolVersion = "0.8.13"
+}
+
+spotbugs {
+    effort = com.github.spotbugs.snom.Effort.MAX
+}
+
+tasks.named('spotbugsMain') {
+    reports {
+        html {
+            required = true
+        }
+        xml {
+            required = true
+        }
+    }
+}
+
+tasks.named('spotbugsTest') {
+    reports {
+        html {
+            required = true
+        }
+        xml {
+            required = true
+        }
+    }
+}
+
+pmd {
+    toolVersion = "7.26.0"
+    ruleSets = []
+    ruleSetFiles = files("config/pmd/ruleset.xml")
+    // Só código de produção: as regras de "boas práticas de JUnit" do PMD
+    // (ex.: proibir mais de um assert por teste, exigir mensagem em todo
+    // assert) colidem direto com o estilo de teste já estabelecido no
+    // projeto (Mockito + AssertJ, múltiplas asserções por método) e
+    // geram só ruído, não achado real.
+    sourceSets = [sourceSets.main]
+}
+
+tasks.withType(Pmd).configureEach {
+    reports {
+        html.required = true
+        xml.required = true
+    }
+}
+
+pitest {
+    pitestVersion = '1.25.5'
+    junit5PluginVersion = '1.2.3'
+    // Primeira passada: só o pacote service, onde está a maior parte da
+    // regra de negócio, e só os testes unitários (Mockito) correspondentes
+    // como candidatos a matar mutante. Os testes de integração/@WebMvcTest
+    // sobem contexto Spring a cada execução — incluí-los faria o PIT
+    // reexecutar esse bootstrap por mutante, inviável numa primeira rodada.
+    targetClasses = ['com.unicar.service.*']
+    targetTests = ['com.unicar.service.*']
+    outputFormats = ['HTML', 'XML']
+    timestampedReports = false
+    threads = 4
 }
 
 tasks.named('test') {

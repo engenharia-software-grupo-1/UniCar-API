@@ -545,6 +545,19 @@ class CaronaServiceTest {
         }
     }
 
+    private CaronaRequestDTO criarRequestValido(Integer quantidadeVagas, BigDecimal valorContribuicao) {
+        return new CaronaRequestDTO(
+                veiculo.getId(),
+                new EnderecoDTO("Bodocongó", ORIGEM_LAT, ORIGEM_LON),
+                new EnderecoDTO("UFCG", DESTINO_LAT, DESTINO_LON),
+                "Portaria principal",
+                List.of(LocalDateTime.now().plusDays(1)),
+                quantidadeVagas,
+                valorContribuicao,
+                null
+        );
+    }
+
     @Nested
     @DisplayName("Listar passageiros")
     class ListarPassageiros {
@@ -665,5 +678,57 @@ class CaronaServiceTest {
         assertThrows(CaronaNaoEncontradaException.class, () ->
                 caronaService.iniciarCarona(caronaId, motoristaId)
         );
+    }
+
+    @ParameterizedTest(name = "vagas={0} -> aceita={1}")
+    @CsvSource({
+            "-1,false",
+            "0,false",
+            "1,true",
+            "100,true"
+    })
+    @DisplayName("Deve validar limite mínimo da quantidade de vagas ao criar carona")
+    void vagasLimiteDeCriacao(int quantidadeVagas, boolean deveSerAceita) {
+        CaronaRequestDTO request = criarRequestValido(quantidadeVagas, new BigDecimal("1.00"));
+
+        when(usuarioRepository.findByIdForUpdate(motoristaId)).thenReturn(Optional.of(motorista));
+        when(veiculoRepository.findById(veiculo.getId())).thenReturn(Optional.of(veiculo));
+
+        if (deveSerAceita) {
+            when(caronaRepository.existsByMotorista_IdAndStatus(motoristaId, StatusCarona.EM_ANDAMENTO)).thenReturn(false);
+            when(caronaRepository.existsByMotoristaIdAndDataHoraPartidaAndStatusIn(eq(motoristaId), any(), anyList())).thenReturn(false);
+            when(caronaRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+
+            assertDoesNotThrow(() -> caronaService.criar(request, motoristaId));
+        } else {
+            assertThrows(RegraDeNegocioException.class, () -> caronaService.criar(request, motoristaId));
+            verify(caronaRepository, never()).saveAll(any());
+        }
+    }
+
+    @ParameterizedTest(name = "valor={0} -> aceita={1}")
+    @CsvSource({
+            "0.00,true",
+            "4.54,true",
+            "4.55,true",
+            "4.56,false"
+    })
+    @DisplayName("Deve validar limite do valor de contribuição pela distância do trajeto")
+    void valorLimiteDeCriacao(BigDecimal valorContribuicao, boolean deveSerAceita) {
+        CaronaRequestDTO request = criarRequestValido(4, valorContribuicao);
+
+        when(usuarioRepository.findByIdForUpdate(motoristaId)).thenReturn(Optional.of(motorista));
+        when(veiculoRepository.findById(veiculo.getId())).thenReturn(Optional.of(veiculo));
+        when(caronaRepository.existsByMotorista_IdAndStatus(motoristaId, StatusCarona.EM_ANDAMENTO)).thenReturn(false);
+
+        if (deveSerAceita) {
+            when(caronaRepository.existsByMotoristaIdAndDataHoraPartidaAndStatusIn(eq(motoristaId), any(), anyList())).thenReturn(false);
+            when(caronaRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+
+            assertDoesNotThrow(() -> caronaService.criar(request, motoristaId));
+        } else {
+            assertThrows(RegraDeNegocioException.class, () -> caronaService.criar(request, motoristaId));
+            verify(caronaRepository, never()).saveAll(any());
+        }
     }
 }

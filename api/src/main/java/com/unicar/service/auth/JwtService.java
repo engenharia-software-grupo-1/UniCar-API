@@ -17,7 +17,7 @@ import java.time.Instant;
 import java.util.Date;
 
 @Service
-public class JwtService {
+public final class JwtService {
 
     private final SecretKey secretKey;
     private final long expiracaoMs;

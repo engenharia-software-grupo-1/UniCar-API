@@ -49,14 +49,12 @@ public class VeiculoService {
     public VeiculoResponseDTO atualizar(Long usuarioId, Long veiculoId, VeiculoRequestDTO request) {
         Veiculo veiculo = buscarVeiculo(usuarioId, veiculoId);
 
+        validarPlacaParaAtualizacao(request.placa(), veiculoId);
+
         veiculo.setModelo(request.modelo());
         veiculo.setPlaca(request.placa());
         veiculo.setCor(request.cor());
         veiculo.setTipoVeiculo(request.tipoVeiculo());
-
-        if(!veiculo.getPlaca().equals(request.placa())){
-            validarPlacar(veiculo.getPlaca());
-        }
 
         return VeiculoResponseDTO.from(veiculoRepository.save(veiculo));
     }
@@ -83,6 +81,13 @@ public class VeiculoService {
 
     private void validarPlacar(String placa){
         if(veiculoRepository.existsByPlaca(placa)){
+            throw new RegraDeNegocioException(
+                    "Já existe um veículo com a placa informada.");
+        }
+    }
+
+    private void validarPlacaParaAtualizacao(String placa, Long veiculoId) {
+        if (veiculoRepository.existsByPlacaAndIdNot(placa, veiculoId)) {
             throw new RegraDeNegocioException(
                     "Já existe um veículo com a placa informada.");
         }

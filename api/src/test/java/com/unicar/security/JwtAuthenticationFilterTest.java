@@ -59,15 +59,12 @@ class JwtAuthenticationFilterTest {
                 new MockHttpServletResponse(),
                 new MockFilterChain());
 
-        assertThat(SecurityContextHolder.getContext().getAuthentication())
-                .isNotNull();
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(authentication).isNotNull();
 
-        UsuarioDetails details =
-                (UsuarioDetails) SecurityContextHolder.getContext()
-                        .getAuthentication()
-                        .getPrincipal();
+        UsuarioDetails details = (UsuarioDetails) authentication.getPrincipal();
 
-        assertThat(details.getUsuario()).isSameAs(usuario);
+        assertThat(details.getUsuario()).usingRecursiveComparison().isEqualTo(usuario);
     }
 
     @Test
