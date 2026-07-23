@@ -2,7 +2,6 @@ package com.unicar.controller;
 
 import com.unicar.domain.Usuario;
 import com.unicar.dto.interesseTrajeto.CoordenadaDTO;
-import com.unicar.dto.interesseTrajeto.InteresseTrajetoCriadoDTO;
 import com.unicar.dto.interesseTrajeto.InteresseTrajetoDTO;
 import com.unicar.security.JwtAuthenticationFilter;
 import com.unicar.security.UsuarioDetails;
@@ -81,7 +80,7 @@ class InteresseTrajetoControllerTest {
         void deveCadastrar() throws Exception {
 
             when(interesseTrajetoService.cadastrar(eq(USUARIO_ID), any()))
-                    .thenReturn(new InteresseTrajetoCriadoDTO(10L));
+                    .thenReturn(new InteresseTrajetoDTO(10L, null, null, null));
 
             String body = """
                 {
@@ -125,7 +124,8 @@ class InteresseTrajetoControllerTest {
                                             new BigDecimal("-35.90872")),
                                     new CoordenadaDTO(
                                             new BigDecimal("-7.21590"),
-                                            new BigDecimal("-35.90950"))
+                                            new BigDecimal("-35.90950")),
+									null
                             )
                     ));
 
