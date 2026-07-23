@@ -80,9 +80,8 @@ public class HistoricoService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Acesso negado: você não participou desta viagem.");
         }
 
-
-        if (carona.getStatus() != StatusCarona.FINALIZADA) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Esta viagem ainda não foi finalizada.");
+        if (carona.getStatus() != StatusCarona.FINALIZADA && carona.getStatus() != StatusCarona.CANCELADA) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Esta viagem ainda não foi finalizada nem cancelada.");
         }
 
         ParticipanteResumoDTO motoristaDTO = new ParticipanteResumoDTO(
