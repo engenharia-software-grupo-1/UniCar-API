@@ -804,9 +804,6 @@ components:
             nome:
               type: string
               example: Maria Oliveira
-            linkFoto:
-              type: string
-              format: uri
             genero:
               type: string
               example: FEMININO
