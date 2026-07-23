@@ -111,6 +111,7 @@ class BuscaCaronaServiceTest {
             carona.setValorContribuicao(new BigDecimal("2.00"));
             carona.getMotorista().setNome("Jennifer");
             carona.getMotorista().setCurso("Ciência da Computação");
+            carona.getMotorista().setLinkFoto("https://cdn.exemplo.com/jennifer.jpg");
 
             when(caronaRepository.findAll(any(Specification.class))).thenReturn(List.of(carona));
             when(avaliacaoService.buscarReputacoes(List.of(motoristaId)))
@@ -124,6 +125,7 @@ class BuscaCaronaServiceTest {
             assertEquals(caronaId, dto.id());
             assertEquals("Partage Shopping", dto.origem().descricao());
             assertEquals("Jennifer", dto.motorista().nome());
+            assertEquals("https://cdn.exemplo.com/jennifer.jpg", dto.motorista().linkFoto());
             assertEquals(4.0, dto.motorista().reputacao());
             verify(avaliacaoService).buscarReputacoes(List.of(motoristaId));
         }

@@ -18,9 +18,11 @@ import com.unicar.exception.EstadoInvalidoException;
 import com.unicar.exception.RegraDeNegocioException;
 import com.unicar.exception.VeiculoNaoEncontradoException;
 import com.unicar.repository.CaronaRepository;
+import com.unicar.repository.InteresseTrajetoRepository;
 import com.unicar.repository.ReservaCaronaRepository;
 import com.unicar.repository.UsuarioRepository;
 import com.unicar.repository.VeiculoRepository;
+import com.unicar.service.NotificacaoService;
 import com.unicar.util.GeoUtils;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +55,10 @@ class CaronaServiceTest {
     private VeiculoRepository veiculoRepository;
     @Mock
     private ReservaCaronaRepository reservaCaronaRepository;
+    @Mock
+    private InteresseTrajetoRepository interesseTrajetoRepository;
+    @Mock
+    private NotificacaoService notificacaoService;
     @InjectMocks
     private CaronaService caronaService;
     private final Long caronaId = 1L;
@@ -75,6 +81,7 @@ class CaronaServiceTest {
 
         motorista = new Usuario();
         motorista.setId(motoristaId);
+        motorista.setLinkFoto("https://cdn.exemplo.com/motorista.jpg");
 
         veiculo = new Veiculo();
         veiculo.setId(veiculoId);
@@ -372,6 +379,7 @@ class CaronaServiceTest {
 
             assertEquals(caronaId, resultado.id());
             assertEquals(3, resultado.vagasDisponiveis());
+            assertEquals("https://cdn.exemplo.com/motorista.jpg", resultado.motorista().linkFoto());
         }
 
         @Test
@@ -547,6 +555,7 @@ class CaronaServiceTest {
             Usuario passageiro = new Usuario();
             passageiro.setId(2L);
             passageiro.setNome("João");
+            passageiro.setLinkFoto("https://cdn.exemplo.com/passageiro.jpg");
             ReservaCarona reserva = new ReservaCarona();
             reserva.setUsuario(passageiro);
             reserva.setCarona(carona);
@@ -557,6 +566,7 @@ class CaronaServiceTest {
             List<PassageiroResponseDTO> resultado = caronaService.listarPassageiros(caronaId, motoristaId);
             assertNotNull(resultado);
             assertEquals(1, resultado.size());
+            assertEquals("https://cdn.exemplo.com/passageiro.jpg", resultado.getFirst().linkFoto());
             verify(reservaCaronaRepository).findByCaronaIdAndStatus(caronaId, StatusReserva.ACEITA);
         }
         @Test

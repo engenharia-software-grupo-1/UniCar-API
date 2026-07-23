@@ -85,10 +85,13 @@ public class AvaliacaoService {
         Double media = avaliacaoRepository.calcularMedia(usuarioId);
         Long quantidade = avaliacaoRepository.countByAvaliadoId(usuarioId);
 
+        List<AvaliacaoRecebidaDTO> avaliacoes = listarAvaliacoesRecebidas(usuarioId);
+
         return new ReputacaoDTO(
                 usuario.getId(),
                 arredondarMedia(media),
-                quantidade
+                quantidade,
+                avaliacoes
         );
     }
 
@@ -138,6 +141,7 @@ public class AvaliacaoService {
                 pendentes.add(new ParticipantePendenteDTO(
                         carona.getMotorista().getId(),
                         carona.getMotorista().getNome(),
+                        carona.getMotorista().getLinkFoto(),
                         "MOTORISTA"
                 ));
             }
@@ -153,6 +157,7 @@ public class AvaliacaoService {
                     pendentes.add(new ParticipantePendenteDTO(
                             passageiroId,
                             reserva.getUsuario().getNome(),
+                            reserva.getUsuario().getLinkFoto(),
                             "PASSAGEIRO"
                     ));
                 }
@@ -160,6 +165,10 @@ public class AvaliacaoService {
         }
 
         return pendentes;
+    }
+
+    public Long contaAvaliacoes(Long id){
+        return avaliacaoRepository.countByAvaliadoId(id);
     }
 
     private Usuario buscarUsuario(Long id) {

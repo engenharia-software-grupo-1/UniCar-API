@@ -373,13 +373,9 @@ class AuthServiceTest {
                       "matricula_do_estudante": "2023001",
                       "nome_do_curso": "Ciência da Computação",
                       "sexo": "F",
-                      "cpf": "123456"
+                      "cpf": "123456789012"
                     }
                     """, MediaType.APPLICATION_JSON));
-
-            given(usuarioRepository.findByCpf("123456")).willReturn(Optional.empty());
-            given(usuarioRepository.findByMatricula("2023001")).willReturn(Optional.empty());
-            given(usuarioRepository.findByEmail("invalido@unicar.edu.br")).willReturn(Optional.empty());
 
             assertThatThrownBy(() -> authService.login(requestValido()))
                 .isInstanceOf(ResponseStatusException.class)

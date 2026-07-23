@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,10 +37,24 @@ public interface ReservaCaronaRepository extends JpaRepository<ReservaCarona, Lo
     @Query("select r from ReservaCarona r where r.id = :id")
     Optional<ReservaCarona> findByIdForUpdate(@Param("id") Long id);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select r
+              from ReservaCarona r
+             where r.status = com.unicar.enums.StatusReserva.PENDENTE
+               and r.dataExpiracao <= :agora
+            """)
+    List<ReservaCarona> buscarReservasPendentesExpiradasParaAtualizacao(@Param("agora") LocalDateTime agora);
+
     @Query("SELECT r FROM ReservaCarona r " +
             "JOIN r.carona c " +
             "WHERE r.usuario.id = :passageiroId " +
             "AND c.status = com.unicar.enums.StatusCarona.FINALIZADA " +
             "ORDER BY c.dataHoraPartida DESC")
     Page<ReservaCarona> findHistoricoComoPassageiro(@Param("passageiroId") Long passageiroId, Pageable pageable);
+
+    long countByUsuarioIdAndStatus(
+            Long usuarioId,
+            StatusReserva status
+    );
 }

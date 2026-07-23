@@ -5,5 +5,6 @@ public record MotoristaBuscaDTO(
         String nome,
         String genero,
         String curso,
+        String linkFoto,
         Double reputacao
 ) {}

@@ -159,6 +159,7 @@ public class BuscaCaronaService {
                         c.getMotorista().getNome(),
                         c.getMotorista().getGenero() != null ? c.getMotorista().getGenero().name() : null,
                         c.getMotorista().getCurso(),
+                        c.getMotorista().getLinkFoto(),
                         reputacao != null ? reputacao.media() : null),
                 c.getDataHoraPartida(),
                 c.getVagasTotais(),

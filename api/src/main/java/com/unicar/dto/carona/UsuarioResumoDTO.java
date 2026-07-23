@@ -4,9 +4,10 @@ import com.unicar.domain.Usuario;
 
 public record UsuarioResumoDTO(
     Long id,
-    String nome
+    String nome,
+    String linkFoto
 ) {
     public UsuarioResumoDTO(Usuario usuario) {
-        this(usuario.getId(), usuario.getNome());
+        this(usuario.getId(), usuario.getNome(), usuario.getLinkFoto());
     }
 }
