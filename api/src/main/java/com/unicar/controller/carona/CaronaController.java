@@ -122,4 +122,11 @@ public class CaronaController {
                 buscaCaronaService.buscarCaronasDisponiveis(filtros, usuario.getUsuario().getId());
         return ResponseEntity.ok(caronas);
     }
+
+    @GetMapping("/cursos")
+    @Operation(summary = "Lista os cursos ativos da UFCG")
+    public ResponseEntity<List<String>> listarCursos(@AuthenticationPrincipal UsuarioDetails usuario) {
+        List<String> cursos = buscaCaronaService.listarCursos();
+        return ResponseEntity.ok(cursos);
+    }
 }

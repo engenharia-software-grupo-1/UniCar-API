@@ -39,6 +39,7 @@ eureca:
   url:
     tokens: ${EURECA_TOKENS_URL:https://eureca.sti.ufcg.edu.br/as-sig/tokens}
     estudante: ${EURECA_ESTUDANTE_URL:https://eureca.sti.ufcg.edu.br/das-sig/v1/estudantes/estudante}
+    cursos: ${EURECA_CURSOS_URL:https://eureca.sti.ufcg.edu.br/das-sig/v1/cursos}
     profile: ${EURECA_PROFILE_URL:https://eureca.sti.ufcg.edu.br/as-sig/profile}
     professor: ${EURECA_PROFESSOR_URL:https://eureca.sti.ufcg.edu.br/das-sig/v1/professores/professor}
 

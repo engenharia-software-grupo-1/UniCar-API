@@ -9,16 +9,23 @@ import com.unicar.repository.CaronaRepository.CaronaProximaProjection;
 import com.unicar.repository.ReservaCaronaRepository;
 import com.unicar.service.AvaliacaoService;
 import com.unicar.util.GeoUtils;
+
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Objects;
 
 /**
  * Responsável por todas as formas de busca de caronas disponíveis
@@ -35,6 +42,9 @@ public class BuscaCaronaService {
     private final CaronaRepository caronaRepository;
     private final ReservaCaronaRepository reservaCaronaRepository;
     private final AvaliacaoService avaliacaoService;
+    private final RestClient.Builder restClientBuilder;
+    @Value("${eureca.url.cursos}")
+    private String cursosUrl;
 
     /**
      * Busca caronas disponíveis para o usuário autenticado, aplicando filtros
@@ -81,6 +91,29 @@ public class BuscaCaronaService {
                         BigDecimal.valueOf(p.getDistanciaKm()).setScale(2, RoundingMode.HALF_UP)))
                 .filter(dto -> dto.vagasDisponiveis() > 0)
                 .toList();
+    }
+
+    public List<String> listarCursos() {
+        RestClient client = restClientBuilder.build();
+        String url = UriComponentsBuilder.fromUriString(cursosUrl)
+            .queryParam("status", "ATIVOS")
+            .toUriString();
+
+
+        CursoDTO[] cursos = client.get()
+                .uri(url)
+                .retrieve()
+                .body(CursoDTO[].class);
+
+        if (cursos == null) {
+            return Collections.emptyList();
+        }
+
+        return Arrays.stream(cursos)
+            .filter(Objects::nonNull)
+            .map(c -> c.descricao())
+            .filter(Objects::nonNull)
+            .toList();
     }
 
     /**

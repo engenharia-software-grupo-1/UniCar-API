@@ -1869,6 +1869,32 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorMessage'
+  /caronas/cursos:
+    get:
+      tags: [Caronas]
+      summary: Listar cursos ativos da UFCG
+      description: Retorna a lista de descrições dos cursos com status ATIVO, consultados na API do Eureca.
+      responses:
+        '200':
+          description: Lista de descrições de cursos ativos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+              example:
+                - "LICENCIATURA INTERCULTURAL INDÍGENA - D"
+                - "ENSINO INFANTIL"
+                - "DESIGN - D"
+                - "TECNOLOGIA EM GESTÃO PÚBLICA - N"
+                - "CIÊNCIA DA COMPUTAÇÃO - D"
+        '401':
+          description: Não autenticado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorMessage'
 
   /caronas/{id}:
     get:
