@@ -2,13 +2,11 @@ package com.unicar.service;
 
 import com.unicar.domain.InteresseTrajeto;
 import com.unicar.dto.interesseTrajeto.CoordenadaDTO;
-import com.unicar.dto.interesseTrajeto.InteresseTrajetoCriadoDTO;
 import com.unicar.dto.interesseTrajeto.InteresseTrajetoDTO;
 import com.unicar.dto.interesseTrajeto.InteresseTrajetoRequest;
 import com.unicar.exception.InteresseNaoEncontrado;
 import com.unicar.exception.RegraDeNegocioException;
 import com.unicar.repository.InteresseTrajetoRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +19,7 @@ public class InteresseTrajetoService{
 
     private final InteresseTrajetoRepository repository;
 
-    public InteresseTrajetoCriadoDTO cadastrar(Long usuarioId, InteresseTrajetoRequest request) {
+    public InteresseTrajetoDTO cadastrar(Long usuarioId, InteresseTrajetoRequest request) {
 
         boolean existe = repository
                 .existsByUsuarioIdAndOrigemLatitudeAndOrigemLongitudeAndDestinoLatitudeAndDestinoLongitude(
@@ -44,7 +42,8 @@ public class InteresseTrajetoService{
                 .dataRegistro(LocalDateTime.now())
                 .build();
 
-        return new InteresseTrajetoCriadoDTO(repository.save(interesse).getId());
+        InteresseTrajeto salvo = repository.save(interesse);
+		return toResponse(salvo);
     }
 
     public List<InteresseTrajetoDTO> listar(Long usuarioId) {
@@ -75,7 +74,8 @@ public class InteresseTrajetoService{
                 new CoordenadaDTO(
                         entity.getDestinoLatitude(),
                         entity.getDestinoLongitude()
-                )
+                ),
+                entity.getDataRegistro()
         );
     }
 }

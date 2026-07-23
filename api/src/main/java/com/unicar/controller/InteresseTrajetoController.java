@@ -1,6 +1,5 @@
 package com.unicar.controller;
 
-import com.unicar.dto.interesseTrajeto.InteresseTrajetoCriadoDTO;
 import com.unicar.dto.interesseTrajeto.InteresseTrajetoDTO;
 import com.unicar.dto.interesseTrajeto.InteresseTrajetoRequest;
 import com.unicar.security.UsuarioDetails;
@@ -57,11 +56,11 @@ public class InteresseTrajetoController {
                     content = @Content(schema = @Schema(hidden = true))
             )
     })
-    public ResponseEntity<InteresseTrajetoCriadoDTO> cadastrar(
+    public ResponseEntity<InteresseTrajetoDTO> cadastrar(
             @AuthenticationPrincipal UsuarioDetails userDetails,
             @Valid @RequestBody InteresseTrajetoRequest request) {
 
-        InteresseTrajetoCriadoDTO dto = interesseTrajetoService.cadastrar(
+        InteresseTrajetoDTO dto = interesseTrajetoService.cadastrar(
                 userDetails.getUsuario().getId(),
                 request
         );
