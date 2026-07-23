@@ -1,6 +1,7 @@
 package com.unicar.service.chat;
 
 import com.unicar.domain.ReservaCarona;
+import com.unicar.domain.Usuario;
 import com.unicar.domain.chat.Chat;
 import com.unicar.dto.chat.ChatDTO;
 import com.unicar.repository.chat.ChatRepository;
@@ -26,9 +27,9 @@ public class ChatService {
         return chats.stream()
                 .map(chat -> {
                     Long passageiroId = chat.getReserva().getUsuario().getId();
-                    String nomeParticipante = usuarioAutenticadoId.equals(passageiroId)
-                            ? chat.getReserva().getCarona().getMotorista().getNome()
-                            : chat.getReserva().getUsuario().getNome();
+                    Usuario participante = usuarioAutenticadoId.equals(passageiroId)
+                            ? chat.getReserva().getCarona().getMotorista()
+                            : chat.getReserva().getUsuario();
 
                     String ultimaMensagem = "Clique para abrir a conversa";
                     LocalDateTime dataUltimaMensagem = chat.getDataCriacao();
@@ -37,7 +38,8 @@ public class ChatService {
                     return new ChatDTO(
                             chat.getId(),
                             chat.getReserva().getId(),
-                            nomeParticipante,
+                            participante.getNome(),
+                            participante.getLinkFoto(),
                             ultimaMensagem,
                             dataUltimaMensagem,
                             mensagensNaoLidas
@@ -63,6 +65,7 @@ public class ChatService {
                 chatSalvo.getId(),
                 reserva.getId(),
                 reserva.getCarona().getMotorista().getNome(),
+                reserva.getCarona().getMotorista().getLinkFoto(),
                 "Chat inicializado",
                 chatSalvo.getDataCriacao(),
                 0

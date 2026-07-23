@@ -1,12 +1,14 @@
 package com.unicar.service;
 
 import com.unicar.domain.Usuario;
+import com.unicar.dto.avaliacao.ReputacaoDTO;
 import com.unicar.dto.usuario.PerfilUsuarioDTO;
 import com.unicar.dto.usuario.UpdateFotoPerfilRequestDTO;
 import com.unicar.dto.usuario.UpdatePerfilRequestDTO;
 import com.unicar.dto.usuario.UsuarioDTO;
 import com.unicar.repository.UsuarioRepository;
 
+import com.unicar.service.carona.CaronaService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,9 +22,13 @@ public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
     private final AvaliacaoService avaliacaoService;
+    private final CaronaService caronaService;
 
     public UsuarioDTO buscarPerfil(Long usuarioId) {
-        return UsuarioDTO.from(buscarUsuarioAtivo(usuarioId));
+        Usuario usuario = buscarUsuarioAtivo(usuarioId);
+        Double reputacao = avaliacaoService.buscarReputacao(usuarioId).media();
+
+        return UsuarioDTO.from(usuario, reputacao);
     }
 
     public PerfilUsuarioDTO perfilPublico(Long id) {
@@ -38,7 +44,9 @@ public class UsuarioService {
                 usuario.getGenero().name(),
                 usuario.getLinkFoto(),
                 reputacao.media(),
-                reputacao.quantidadeAvaliacoes().intValue()
+                reputacao.quantidadeAvaliacoes().intValue(),
+                avaliacaoService.listarAvaliacoesRecebidas(id),
+                caronaService.contaCaronasParticipadas(usuario.getId())
         );
     }
 

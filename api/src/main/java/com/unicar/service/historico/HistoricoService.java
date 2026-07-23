@@ -58,7 +58,9 @@ public class HistoricoService {
                     carona.getId(),
                     carona.getOrigemDescricao(),
                     carona.getDestinoDescricao(),
+                    carona.getMotorista().getId(),
                     carona.getMotorista().getNome(),
+                    carona.getMotorista().getLinkFoto(),
                     carona.getStatus(),
                     carona.getDataHoraPartida(),
                     quantPassageiros
@@ -85,13 +87,18 @@ public class HistoricoService {
 
         ParticipanteResumoDTO motoristaDTO = new ParticipanteResumoDTO(
                 carona.getMotorista().getId(),
-                carona.getMotorista().getNome()
+                carona.getMotorista().getNome(),
+                carona.getMotorista().getLinkFoto()
         );
 
         List<ReservaCarona> reservasAceitas = reservaCaronaRepository.findByCaronaIdAndStatusIn(carona.getId(), STATUS_VALIDOS_HISTORICO);
 
         List<ParticipanteResumoDTO> passageirosDTO = reservasAceitas.stream()
-                .map(r -> new ParticipanteResumoDTO(r.getUsuario().getId(), r.getUsuario().getNome()))
+                .map(r -> new ParticipanteResumoDTO(
+                        r.getUsuario().getId(),
+                        r.getUsuario().getNome(),
+                        r.getUsuario().getLinkFoto()
+                ))
                 .toList();
 
         return new DetalhesHistoricoResponseDTO(
@@ -101,7 +108,8 @@ public class HistoricoService {
                 motoristaDTO,
                 carona.getStatus(),
                 carona.getDataHoraPartida(),
-                passageirosDTO
+                passageirosDTO,
+                carona.getValorContribuicao()
         );
     }
 }

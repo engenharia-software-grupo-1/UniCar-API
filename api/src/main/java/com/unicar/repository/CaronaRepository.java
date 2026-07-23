@@ -73,4 +73,9 @@ public interface CaronaRepository extends JpaRepository<Carona, Long>, JpaSpecif
     );
 
     boolean existsByVeiculoId(Long veiculoID);
+
+    long countByMotoristaIdAndStatus(
+            Long motoristaId,
+            StatusCarona status
+    );
 }

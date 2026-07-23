@@ -6,7 +6,9 @@ public record PassageiroResponseDTO(
         Long reservaId,
         Long usuarioId,
         String nome,
-        Integer quantidadePassageiros
+        String linkFoto,
+        Integer quantidadePassageiros,
+        EnderecoDTO embarque
 ) {
 
     public PassageiroResponseDTO(ReservaCarona reserva) {
@@ -14,7 +16,9 @@ public record PassageiroResponseDTO(
                 reserva.getId(),
                 reserva.getUsuario().getId(),
                 reserva.getUsuario().getNome(),
-                reserva.getQuantidadePassageiros()
+                reserva.getUsuario().getLinkFoto(),
+                reserva.getQuantidadePassageiros(),
+                new EnderecoDTO(reserva.getOrigemEmbarqueDescricao(), reserva.getOrigemEmbarqueLatitude(), reserva.getOrigemEmbarqueLongitude())
         );
     }
 }
