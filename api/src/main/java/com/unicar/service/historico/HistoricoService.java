@@ -27,13 +27,13 @@ public class HistoricoService {
     private final CaronaRepository caronaRepository;
     private final ReservaCaronaRepository reservaCaronaRepository;
 
-    private static final List<StatusReserva> STATUS_PASSAGEIROS_VALIDOS = List.of(StatusReserva.ACEITA, StatusReserva.CONCLUIDA);
+    private static final List<StatusReserva> STATUS_VALIDOS_HISTORICO = List.of(StatusReserva.CANCELADA, StatusReserva.CONCLUIDA);
 
     @Transactional(readOnly = true)
     public Page<HistoricoMotoristaResponseDTO> listarHistoricoComoMotorista(Long usuarioId, Pageable pageable) {
         Page<Carona> caronas = caronaRepository.findHistoricoComoMotorista(usuarioId, pageable);
         return caronas.map(carona -> {
-            int totalPassageiros = reservaCaronaRepository.somarPassageirosPorCaronaEStatusIn(carona.getId(), STATUS_PASSAGEIROS_VALIDOS);
+            int totalPassageiros = reservaCaronaRepository.somarPassageirosPorCaronaEStatusIn(carona.getId(), STATUS_VALIDOS_HISTORICO);
 
             return new HistoricoMotoristaResponseDTO(
                     carona.getId(),
@@ -51,7 +51,7 @@ public class HistoricoService {
         Page<ReservaCarona> reservas = reservaCaronaRepository.findHistoricoComoPassageiro(usuarioId, pageable);
         return reservas.map(reserva -> {
             Carona carona = reserva.getCarona();
-            int quantPassageiros = reservaCaronaRepository.somarPassageirosPorCaronaEStatusIn(carona.getId(), STATUS_PASSAGEIROS_VALIDOS);
+            int quantPassageiros = reservaCaronaRepository.somarPassageirosPorCaronaEStatusIn(carona.getId(), STATUS_VALIDOS_HISTORICO);
 
             return new HistoricoPassageiroResponseDTO(
                     reserva.getId(),
@@ -88,7 +88,7 @@ public class HistoricoService {
                 carona.getMotorista().getNome()
         );
 
-        List<ReservaCarona> reservasAceitas = reservaCaronaRepository.findByCaronaIdAndStatusIn(carona.getId(), STATUS_PASSAGEIROS_VALIDOS);
+        List<ReservaCarona> reservasAceitas = reservaCaronaRepository.findByCaronaIdAndStatusIn(carona.getId(), STATUS_VALIDOS_HISTORICO);
 
         List<ParticipanteResumoDTO> passageirosDTO = reservasAceitas.stream()
                 .map(r -> new ParticipanteResumoDTO(r.getUsuario().getId(), r.getUsuario().getNome()))
