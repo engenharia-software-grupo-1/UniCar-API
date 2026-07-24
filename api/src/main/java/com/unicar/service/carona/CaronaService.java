@@ -1,6 +1,7 @@
 package com.unicar.service.carona;
 
 import com.unicar.domain.Carona;
+import com.unicar.domain.InteresseTrajeto;
 import com.unicar.domain.ReservaCarona;
 import com.unicar.domain.Usuario;
 import com.unicar.domain.Veiculo;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -35,8 +37,14 @@ public class CaronaService {
     private final InteresseTrajetoRepository interesseTrajetoRepository;
     private final NotificacaoService notificacaoService;
 
-    @Value("${unicar.carona.fator-valor-por-km:1.00}")
-    private BigDecimal fatorValorPorKm;
+    @Value("${unicar.carona.preco-combustivel-litro:6.00}")
+    private BigDecimal precoCombustivelLitro;
+
+    @Value("${unicar.carona.consumo-medio-km-litro:12.00}")
+    private BigDecimal consumoMedioKmLitro;
+
+    @Value("${unicar.carona.margem-maxima-motorista:0.15}")
+    private BigDecimal margemMaximaMotorista;
 
     @Transactional
     public List<CaronaResponseDTO> criar(CaronaRequestDTO request, Long motoristaId) {
@@ -59,7 +67,7 @@ public class CaronaService {
             throw new RegraDeNegocioException("O motorista já possui uma carona em andamento");
         }
 
-        validarValorContribuicao(request.origem(), request.destino(), request.valorContribuicao());
+        validarValorContribuicao(request.origem(), request.destino(), BigDecimal.ZERO, request.valorContribuicao());
 
         List<Carona> caronasParaSalvar = request.datasHorasSaida().stream()
                 .map(dataHora -> {
@@ -94,14 +102,14 @@ public class CaronaService {
 
         List<Carona> caronasSalvas = caronaRepository.saveAll(caronasParaSalvar);
 
-        List<com.unicar.domain.InteresseTrajeto> todosInteresses = interesseTrajetoRepository.findAll();
+        List<InteresseTrajeto> todosInteresses = interesseTrajetoRepository.findAll();
 
         caronasSalvas.forEach(carona -> {
             List<Long> usuarioIdsInteressados = todosInteresses.stream()
                     .filter(interesse -> !interesse.getUsuarioId().equals(motoristaId))
                     .filter(interesse -> interesse.getDestinoLatitude().compareTo(carona.getDestinoLatitude()) == 0
                             && interesse.getDestinoLongitude().compareTo(carona.getDestinoLongitude()) == 0)
-                    .map(com.unicar.domain.InteresseTrajeto::getUsuarioId)
+                    .map(InteresseTrajeto::getUsuarioId)
                     .distinct()
                     .toList();
 
@@ -208,7 +216,7 @@ public class CaronaService {
                     "Não é possível reduzir as vagas abaixo da quantidade de passageiros já aceitos");
         }
 
-        validarValorContribuicao(request.origem(), request.destino(), request.valorContribuicao());
+        validarValorContribuicao(request.origem(), request.destino(), BigDecimal.ZERO, request.valorContribuicao());
 
         carona.setOrigemDescricao(request.origem().descricao());
         carona.setOrigemLatitude(request.origem().latitude());
@@ -370,11 +378,30 @@ public class CaronaService {
         }
     }
 
-    private void validarValorContribuicao(EnderecoDTO origem, EnderecoDTO destino, BigDecimal valorContribuicao) {
-        BigDecimal distancia = GeoUtils.calcularDistanciaKm(origem.latitude(), origem.longitude(), destino.latitude(), destino.longitude());
-        BigDecimal valorMaximo = distancia.multiply(fatorValorPorKm);
+    private BigDecimal calcularValorSugeridoPorVaga(EnderecoDTO origem, EnderecoDTO destino,
+                                                 BigDecimal valorPedagios) {
+        BigDecimal distanciaKm = GeoUtils.calcularDistanciaKm(
+                origem.latitude(), origem.longitude(), destino.latitude(), destino.longitude());
+
+        BigDecimal custoPorKm = precoCombustivelLitro.divide(consumoMedioKmLitro, 4, RoundingMode.HALF_UP);
+        BigDecimal precoBase = distanciaKm.multiply(custoPorKm);
+
+        BigDecimal pedagios = valorPedagios != null ? valorPedagios : BigDecimal.ZERO;
+
+        return precoBase.add(pedagios).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private void validarValorContribuicao(EnderecoDTO origem, EnderecoDTO destino,
+                                        BigDecimal valorPedagios, BigDecimal valorContribuicao) {
+        BigDecimal valorSugerido = calcularValorSugeridoPorVaga(origem, destino, valorPedagios);
+
+        BigDecimal valorMaximo = valorSugerido
+                .multiply(BigDecimal.ONE.add(margemMaximaMotorista))
+                .setScale(2, RoundingMode.HALF_UP);
+
         if (valorContribuicao.compareTo(valorMaximo) > 0) {
-            throw new RegraDeNegocioException("O valor da contribuição excede o limite permitido para o trajeto");
+            throw new RegraDeNegocioException(
+                    "O valor máximo permitido para este trajeto é R$ " + valorMaximo);
         }
     }
 }
