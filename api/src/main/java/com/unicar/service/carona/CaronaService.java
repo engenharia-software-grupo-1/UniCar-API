@@ -46,6 +46,9 @@ public class CaronaService {
     @Value("${unicar.carona.margem-maxima-motorista:0.15}")
     private BigDecimal margemMaximaMotorista;
 
+    @Value("${unicar.carona.taxa-ocupacao-estimada:0.70}")
+    private BigDecimal taxaOcupacaoEstimada;
+
     @Transactional
     public List<CaronaResponseDTO> criar(CaronaRequestDTO request, Long motoristaId) {
         Usuario motorista = usuarioRepository.findByIdForUpdate(motoristaId)
@@ -67,7 +70,7 @@ public class CaronaService {
             throw new RegraDeNegocioException("O motorista já possui uma carona em andamento");
         }
 
-        validarValorContribuicao(request.origem(), request.destino(), BigDecimal.ZERO, request.valorContribuicao());
+        validarValorContribuicao(request.origem(), request.destino(), request.quantidadeVagas(), BigDecimal.ZERO, request.valorContribuicao());
 
         List<Carona> caronasParaSalvar = request.datasHorasSaida().stream()
                 .map(dataHora -> {
@@ -216,7 +219,7 @@ public class CaronaService {
                     "Não é possível reduzir as vagas abaixo da quantidade de passageiros já aceitos");
         }
 
-        validarValorContribuicao(request.origem(), request.destino(), BigDecimal.ZERO, request.valorContribuicao());
+        validarValorContribuicao(request.origem(), request.destino(), request.quantidadeVagas(), BigDecimal.ZERO, request.valorContribuicao());
 
         carona.setOrigemDescricao(request.origem().descricao());
         carona.setOrigemLatitude(request.origem().latitude());
@@ -379,21 +382,29 @@ public class CaronaService {
     }
 
     private BigDecimal calcularValorSugeridoPorVaga(EnderecoDTO origem, EnderecoDTO destino,
-                                                 BigDecimal valorPedagios) {
+                                             Integer quantidadeVagas, BigDecimal valorPedagios) {
         BigDecimal distanciaKm = GeoUtils.calcularDistanciaKm(
                 origem.latitude(), origem.longitude(), destino.latitude(), destino.longitude());
 
         BigDecimal custoPorKm = precoCombustivelLitro.divide(consumoMedioKmLitro, 4, RoundingMode.HALF_UP);
-        BigDecimal precoBase = distanciaKm.multiply(custoPorKm);
+        BigDecimal custoTotal = distanciaKm.multiply(custoPorKm);
 
         BigDecimal pedagios = valorPedagios != null ? valorPedagios : BigDecimal.ZERO;
 
-        return precoBase.add(pedagios).setScale(2, RoundingMode.HALF_UP);
+        int passageirosEstimados = calcularPassageirosEstimados(quantidadeVagas);
+        BigDecimal quantidadePessoas = BigDecimal.valueOf(passageirosEstimados + 1L); // +1 = motorista
+
+        return custoTotal.add(pedagios).divide(quantidadePessoas, 2, RoundingMode.HALF_UP);
     }
 
-    private void validarValorContribuicao(EnderecoDTO origem, EnderecoDTO destino,
+    private int calcularPassageirosEstimados(Integer quantidadeVagas) {
+        BigDecimal estimativa = BigDecimal.valueOf(quantidadeVagas).multiply(taxaOcupacaoEstimada);
+        return Math.max(1, estimativa.setScale(0, RoundingMode.HALF_UP).intValue());
+    }
+
+    private void validarValorContribuicao(EnderecoDTO origem, EnderecoDTO destino, Integer quantidadeVagas,
                                         BigDecimal valorPedagios, BigDecimal valorContribuicao) {
-        BigDecimal valorSugerido = calcularValorSugeridoPorVaga(origem, destino, valorPedagios);
+        BigDecimal valorSugerido = calcularValorSugeridoPorVaga(origem, destino, quantidadeVagas, valorPedagios);
 
         BigDecimal valorMaximo = valorSugerido
                 .multiply(BigDecimal.ONE.add(margemMaximaMotorista))
