@@ -2,6 +2,7 @@ package com.unicar.service;
 
 import com.unicar.domain.Avaliacao;
 import com.unicar.domain.Carona;
+import com.unicar.domain.ReservaCarona;
 import com.unicar.domain.Usuario;
 import com.unicar.dto.avaliacao.AvaliacaoRecebidaDTO;
 import com.unicar.dto.avaliacao.AvaliacaoRequestDTO;
@@ -19,13 +20,17 @@ import com.unicar.repository.ReservaCaronaRepository;
 import com.unicar.repository.UsuarioRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,10 +42,10 @@ public class AvaliacaoService {
     private final CaronaRepository caronaRepository;
     private final ReservaCaronaRepository reservaCaronaRepository;
 
-/**
- * Registra a avaliação de um usuário sobre outro em uma carona finalizada,
- * validando participação, nota e se já não foi avaliado antes.
- */
+    /**
+     * Registra a avaliação de um usuário sobre outro em uma carona finalizada,
+     * validando participação, nota e se já não foi avaliado antes.
+     */
     @Transactional
     public Long avaliar(Long usuarioId, AvaliacaoRequestDTO dto) {
         Usuario avaliador = buscarUsuario(usuarioId);
@@ -61,7 +66,11 @@ public class AvaliacaoService {
                 .dataAvaliacao(LocalDateTime.now())
                 .build();
 
-        return avaliacaoRepository.save(avaliacao).getId();
+        try {
+            return avaliacaoRepository.saveAndFlush(avaliacao).getId();
+        } catch (DataIntegrityViolationException e) {
+            throw new RegraDeNegocioException("Você já avaliou este usuário nesta carona.");
+        }
     }
 
     /**
@@ -120,18 +129,26 @@ public class AvaliacaoService {
                 .toList();
     }
 
+    /**
+     * Lista todas as avaliações pendentes de um usuário em uma carona finalizada.
+     */
     public List<ParticipantePendenteDTO> listarAvaliacoesPendentes(Long caronaId, Long usuarioAutenticadoId) {
         Carona carona = buscarCarona(caronaId);
-        validarCaronaFinalizada(carona);
+
+        List<ParticipantePendenteDTO> pendentes = new java.util.ArrayList<>();
+
+        if (carona.getStatus() != StatusCarona.FINALIZADA) {
+            // Carona ainda não finalizada (ou cancelada): não há avaliações pendentes ainda.
+            return pendentes;
+        }
 
         boolean ehMotorista = carona.getMotorista().getId().equals(usuarioAutenticadoId);
-        boolean ehPassageiro = reservaCaronaRepository.existsByCaronaIdAndUsuarioId(caronaId, usuarioAutenticadoId);
+        boolean ehPassageiro = reservaCaronaRepository
+                .existsByCaronaIdAndUsuarioIdAndStatus(caronaId, usuarioAutenticadoId, StatusReserva.CONCLUIDA);
 
         if (!ehMotorista && !ehPassageiro) {
             throw new RegraDeNegocioException("Apenas participantes da carona podem consultar avaliações pendentes.");
         }
-
-        List<ParticipantePendenteDTO> pendentes = new java.util.ArrayList<>();
 
         if (!ehMotorista) {
             boolean jaAvaliouMotorista = avaliacaoRepository.existsByCaronaIdAndAvaliadorIdAndAvaliadoId(
@@ -146,20 +163,26 @@ public class AvaliacaoService {
                 ));
             }
         } else {
-            List<com.unicar.domain.ReservaCarona> reservas = reservaCaronaRepository.findByCaronaIdAndStatus(caronaId, StatusReserva.ACEITA);
+            List<ReservaCarona> reservas = reservaCaronaRepository
+                    .findByCaronaIdAndStatus(caronaId, StatusReserva.CONCLUIDA);
 
-            for (com.unicar.domain.ReservaCarona reserva : reservas) {
-                Long passageiroId = reserva.getUsuario().getId();
-                boolean jaAvaliouPassageiro = avaliacaoRepository.existsByCaronaIdAndAvaliadorIdAndAvaliadoId(
-                        caronaId, usuarioAutenticadoId, passageiroId
-                );
-                if (!jaAvaliouPassageiro) {
-                    pendentes.add(new ParticipantePendenteDTO(
-                            passageiroId,
-                            reserva.getUsuario().getNome(),
-                            reserva.getUsuario().getLinkFoto(),
-                            "PASSAGEIRO"
-                    ));
+            List<Long> jaAvaliados = avaliacaoRepository
+                    .findAvaliadoIdsByCaronaIdAndAvaliadorId(caronaId, usuarioAutenticadoId);
+            Set<Long> jaAvaliadosSet = new HashSet<>(jaAvaliados);
+
+            for (ReservaCarona reserva : reservas) {
+                try {
+                    Long passageiroId = reserva.getUsuario().getId();
+                    if (!jaAvaliadosSet.contains(passageiroId)) {
+                        pendentes.add(new ParticipantePendenteDTO(
+                                passageiroId,
+                                reserva.getUsuario().getNome(),
+                                reserva.getUsuario().getLinkFoto(),
+                                "PASSAGEIRO"
+                        ));
+                    }
+                } catch (Exception e) {
+                    // não interrompe o loop, as demais pendências continuam sendo retornadas
                 }
             }
         }
@@ -197,8 +220,10 @@ public class AvaliacaoService {
         boolean avaliadorEhMotorista = carona.getMotorista().getId().equals(avaliadorId);
         boolean avaliadoEhMotorista = carona.getMotorista().getId().equals(avaliadoId);
 
-        boolean avaliadorEhPassageiro = reservaCaronaRepository.existsByCaronaIdAndUsuarioId(carona.getId(), avaliadorId);
-        boolean avaliadoEhPassageiro = reservaCaronaRepository.existsByCaronaIdAndUsuarioId(carona.getId(), avaliadoId);
+        boolean avaliadorEhPassageiro = reservaCaronaRepository
+                .existsByCaronaIdAndUsuarioIdAndStatus(carona.getId(), avaliadorId, StatusReserva.CONCLUIDA);
+        boolean avaliadoEhPassageiro = reservaCaronaRepository
+                .existsByCaronaIdAndUsuarioIdAndStatus(carona.getId(), avaliadoId, StatusReserva.CONCLUIDA);
 
         if (!(avaliadorEhMotorista || avaliadorEhPassageiro)) {
             throw new RegraDeNegocioException("O avaliador não participou da carona.");
@@ -209,7 +234,6 @@ public class AvaliacaoService {
         if (avaliadorId.equals(avaliadoId)) {
             throw new RegraDeNegocioException("O usuário não pode avaliar a si mesmo.");
         }
-
         if (avaliadoEhPassageiro && !avaliadorEhMotorista) {
             throw new RegraDeNegocioException("Apenas o motorista dono da carona pode avaliar um passageiro.");
         }

@@ -10,7 +10,9 @@ import java.util.List;
 public interface AvaliacaoRepository extends JpaRepository<Avaliacao, Long> {
 
     List<Avaliacao> findByAvaliadoIdOrderByDataAvaliacaoDesc(Long avaliadoId);
-
+    @Query("select a.avaliado.id from Avaliacao a where a.carona.id = :caronaId and a.avaliador.id = :avaliadorId")
+    List<Long> findAvaliadoIdsByCaronaIdAndAvaliadorId(@Param("caronaId") Long caronaId, @Param("avaliadorId") Long avaliadorId);
+    
     boolean existsByCaronaIdAndAvaliadorIdAndAvaliadoId(Long caronaId, Long avaliadorId, Long avaliadoId);
 
     @Query("""
